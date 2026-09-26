@@ -1,6 +1,5 @@
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// Makes the helicopter multiplayer, host-authoritative:
@@ -8,7 +7,7 @@ using UnityEngine.InputSystem;
 ///   (NetworkTransform + NetworkRigidbody on the same object).
 /// - Whoever is in the pilot seat reads their own keyboard/gamepad and sends it to the host
 ///   every physics tick. The host feeds it into HelicopterController.
-/// - Press P to take the pilot seat. The host starts as pilot.
+/// - You fly by sitting in the pilot seat (NetworkPlayer handles walking up and pressing E).
 /// </summary>
 [RequireComponent(typeof(HelicopterController))]
 public class NetworkHelicopter : NetworkBehaviour
@@ -21,9 +20,15 @@ public class NetworkHelicopter : NetworkBehaviour
     /// <summary>Test mode: the pilot flies a scripted pattern instead of reading devices (used by automated tests).</summary>
     public static bool Autopilot;
 
+    [Header("Cabin")]
+    public Transform pilotSeat;       // where the pilot's feet go when seated
+    public Transform pilotSeatExit;   // where they stand after getting up
+    public float cabinFloorHeight = 0.95f;
+
     HelicopterController controller;
     HelicopterInput latestInput;          // host only: most recent input from the pilot
     float lastInputTime;                  // host only: when it arrived (so a lagging pilot doesn't leave the stick held)
+    float pilotSince;                     // when the current pilot sat down (autopilot pattern starts from here)
     const float InputTimeout = 0.5f;
 
     public bool IsLocalPilot => IsSpawned && PilotClientId.Value == NetworkManager.LocalClientId;
@@ -39,11 +44,8 @@ public class NetworkHelicopter : NetworkBehaviour
         controller.simulate = IsServer;
 
         if (IsServer)
-        {
             NetworkManager.OnClientDisconnectCallback += HandleClientDisconnect;
-            if (PilotClientId.Value == NoPilot && IsHost)
-                PilotClientId.Value = NetworkManager.LocalClientId;
-        }
+        PilotClientId.OnValueChanged += (_, _) => pilotSince = Time.time;
     }
 
     public override void OnNetworkDespawn()
@@ -58,25 +60,21 @@ public class NetworkHelicopter : NetworkBehaviour
 
     void HandleClientDisconnect(ulong clientId)
     {
-        if (PilotClientId.Value == clientId)
-        {
-            PilotClientId.Value = NoPilot;
-            latestInput = HelicopterInput.None;
-        }
+        if (PilotClientId.Value == clientId) ClearPilot();
     }
 
-    void Update()
+    /// <summary>Host only: put this client in the pilot seat.</summary>
+    public void SetPilot(ulong clientId)
     {
-        if (!IsSpawned) return;
-
-        var kb = Keyboard.current;
-        if (kb != null && kb.pKey.wasPressedThisFrame) RequestPilotSeat();
+        PilotClientId.Value = clientId;
+        latestInput = HelicopterInput.None;
     }
 
-    /// <summary>Ask the host for the pilot seat.</summary>
-    public void RequestPilotSeat()
+    /// <summary>Host only: empty the pilot seat (the helicopter holds a hover on its own).</summary>
+    public void ClearPilot()
     {
-        if (IsSpawned && !IsLocalPilot) RequestPilotSeatRpc();
+        PilotClientId.Value = NoPilot;
+        latestInput = HelicopterInput.None;
     }
 
     void FixedUpdate()
@@ -86,7 +84,7 @@ public class NetworkHelicopter : NetworkBehaviour
         // Pilot: send this tick's controls to the host (the host sends to itself locally).
         if (IsLocalPilot)
         {
-            var input = Autopilot ? AutopilotInput(Time.time) : HelicopterInput.ReadDevices();
+            var input = Autopilot ? AutopilotInput(Time.time - pilotSince) : HelicopterInput.ReadDevices();
             if (IsServer) ReceiveInput(input);
             else SubmitInputRpc(input);
         }
@@ -111,14 +109,6 @@ public class NetworkHelicopter : NetworkBehaviour
     {
         latestInput = input;
         lastInputTime = Time.time;
-    }
-
-    [Rpc(SendTo.Server)]
-    void RequestPilotSeatRpc(RpcParams rpcParams = default)
-    {
-        // Prototype rule: anyone can grab the stick at any time. (Later: must be sitting in the cockpit.)
-        PilotClientId.Value = rpcParams.Receive.SenderClientId;
-        latestInput = HelicopterInput.None;
     }
 
     /// <summary>Scripted test flight: climb, fly forward, turn, hover.</summary>

@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// First-person camera that rides in a seat inside the helicopter.
-/// The pilot sits in the cockpit; everyone else sits in the cabin (until crew get real bodies).
-/// Mouse looks around (relative to the helicopter, so banking tilts your view with the cabin).
+/// First-person camera.
+/// In a session: sits at your crew member's eyes, or in the cockpit when you're the seated pilot
+/// (NetworkPlayer owns the look direction). Offline: rides in the pilot seat so you can just fly.
 /// Esc frees the mouse (for the menu); click to grab it again. V toggles a debug chase view.
 /// </summary>
 public class FirstPersonSeatCamera : MonoBehaviour
@@ -53,7 +53,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
             SetCursorLocked(true);
         if (kb != null && kb.vKey.wasPressedThisFrame) chaseView = !chaseView;
 
-        if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+        if (mouse != null && Cursor.lockState == CursorLockMode.Locked && NetworkPlayer.Local == null)
         {
             Vector2 d = mouse.delta.ReadValue() * mouseSensitivity;
             yaw = Mathf.Clamp(yaw + d.x, -maxYaw, maxYaw);
@@ -70,6 +70,24 @@ public class FirstPersonSeatCamera : MonoBehaviour
             Vector3 flatForward = Vector3.ProjectOnPlane(helicopter.forward, Vector3.up).normalized;
             transform.position = helicopter.position - flatForward * chaseDistance + Vector3.up * chaseHeight;
             transform.LookAt(helicopter.position + Vector3.up * 2f);
+            return;
+        }
+
+        var me = NetworkPlayer.Local;
+        if (me != null)
+        {
+            if (me.SeatedAsPilot.Value)
+            {
+                // Strapped in: the cockpit banks and pitches with you.
+                transform.position = helicopter.TransformPoint(pilotEye);
+                transform.rotation = helicopter.rotation * Quaternion.Euler(me.LookPitch, Mathf.DeltaAngle(helicopter.eulerAngles.y, me.LookYaw), 0f);
+            }
+            else
+            {
+                // On your feet: eyes at head height, horizon kept level.
+                transform.position = me.GetComponent<CrewBody>().Eye;
+                transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
+            }
             return;
         }
 

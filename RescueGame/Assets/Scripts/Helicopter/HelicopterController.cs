@@ -35,6 +35,10 @@ public class HelicopterController : MonoBehaviour
     public float yawRate = 90f;
     public float yawResponse = 5f;
 
+    [Header("Ground")]
+    [Tooltip("How far below the skids still counts as 'on the ground'.")]
+    public float groundCheckDistance = 0.3f;
+
     [Header("Visuals")]
     public Transform mainRotor;
     public Transform tailRotor;
@@ -57,6 +61,9 @@ public class HelicopterController : MonoBehaviour
     }
 
     /// <summary>Set the controls from outside (e.g. the pilot's input arriving over the network).</summary>
+    /// <summary>The controls currently being applied (for debugging / HUD).</summary>
+    public HelicopterInput CurrentInput => new() { collective = collective, pitch = pitchInput, roll = rollInput, yaw = yawInput };
+
     public void SetInput(HelicopterInput input)
     {
         collective = input.collective;
@@ -76,14 +83,30 @@ public class HelicopterController : MonoBehaviour
         }
     }
 
+    /// <summary>True when the skids are resting on something.</summary>
+    public bool IsLanded { get; private set; }
+
     void FixedUpdate()
     {
         if (!engineOn || !simulate) return;
+
+        // Sitting on the ground with nobody pulling up: engine idles and the full weight rests
+        // on the skids (otherwise the hover assist makes it weightless and it slides around).
+        IsLanded = CheckLanded();
+        if (IsLanded && collective <= 0.05f) return;
 
         ApplyLift();
         ApplyTilt();
         ApplyYaw();
         ApplyHorizontalDrag();
+    }
+
+    bool CheckLanded()
+    {
+        Vector3 origin = transform.position + transform.up * 0.3f;
+        foreach (var hit in Physics.RaycastAll(origin, -transform.up, 0.3f + groundCheckDistance, ~0, QueryTriggerInteraction.Ignore))
+            if (hit.rigidbody != rb) return true;
+        return false;
     }
 
     void ApplyLift()
