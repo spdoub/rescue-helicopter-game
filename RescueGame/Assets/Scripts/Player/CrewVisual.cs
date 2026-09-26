@@ -102,6 +102,22 @@ public class CrewVisual : MonoBehaviour
     float leftFootWeight, rightFootWeight;
 
     SkinnedMeshRenderer[] skins;
+    bool suitSet;
+    static readonly int SuitHueId = Shader.PropertyToID("_SuitHueShift");
+
+    /// <summary>Player 1 keeps the orange suit; others get blue, green, purple, then variations.</summary>
+    public static float SuitHueShift(ulong clientId)
+    {
+        float[] shifts = { 0f, 0.55f, 0.25f, 0.68f, 0.12f, 0.9f };
+        return shifts[(int)(clientId % (ulong)shifts.Length)];
+    }
+
+    /// <summary>A readable colour matching that suit (for name tags).</summary>
+    public static Color SuitColor(ulong clientId)
+    {
+        float h = (0.055f + SuitHueShift(clientId)) % 1f;
+        return Color.HSVToRGB(h, 0.75f, 1f);
+    }
     MaterialPropertyBlock hideBlock;
     bool torsoTagged;
     static readonly int HideTaggedId = Shader.PropertyToID("_HideTagged");
@@ -345,6 +361,20 @@ public class CrewVisual : MonoBehaviour
         // First person: hide your own torso, neck and head from your camera (not from shadows or
         // other players), so the camera can never end up inside your body.
         if (isLocal && !torsoTagged) TagTorso();
+
+        // Each crew member's jumpsuit gets its own colour (orange, blue, green, purple...).
+        if (!suitSet && player.IsSpawned && !player.IsNpc)
+        {
+            suitSet = true;
+            float shift = SuitHueShift(player.OwnerClientId);
+            foreach (var smr in skins)
+            {
+                smr.GetPropertyBlock(hideBlock);
+                hideBlock.SetFloat(SuitHueId, shift);
+                smr.SetPropertyBlock(hideBlock);
+            }
+        }
+
         if (torsoTagged)
         {
             float hide = isLocal && !ShowOwnHead ? 1f : 0f;

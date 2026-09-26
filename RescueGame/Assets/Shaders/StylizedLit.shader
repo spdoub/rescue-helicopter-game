@@ -21,6 +21,7 @@ Shader "RescueGame/Stylized Lit"
         [HDR] _EmissionColor("Emission (glow)", Color) = (0,0,0,0)
         _ShadowStrength("Shadow Strength (0 = ignore shadows)", Range(0, 1)) = 1
         _ClipBoxCount("Hidden Zones (object space boxes, set from script)", Float) = 0
+        _SuitHueShift("Suit Hue Shift (turns): recolours only orange", Range(0, 1)) = 0
     }
 
     SubShader
@@ -43,6 +44,7 @@ Shader "RescueGame/Stylized Lit"
             float _WorldUVScale;
             half _HideTagged;
             half4 _EmissionColor;
+            half _SuitHueShift;
             half _ShadowStrength;
             float _ClipBoxCount;
         CBUFFER_END
@@ -138,6 +140,23 @@ Shader "RescueGame/Stylized Lit"
                     uv = a.y > a.x && a.y > a.z ? p.xz : (a.x > a.z ? p.zy : p.xy);
                 }
                 half4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv) * _BaseColor;
+                // Per-player jumpsuit colour: rotate the hue of saturated orange only (skin, hair and gear untouched).
+                if (_SuitHueShift > 0.001)
+                {
+                    half3 c = pow(max(albedo.rgb, 0.0001), 1.0 / 2.2); // do the colour maths in sRGB (how it looks)
+                    half mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), d = mx - mn;
+                    half sat = mx > 0.0001 ? d / mx : 0;
+                    half hue = 0;
+                    if (d > 0.0001) hue = mx == c.r ? frac(((c.g - c.b) / d) / 6.0) : (mx == c.g ? ((c.b - c.r) / d + 2.0) / 6.0 : ((c.r - c.g) / d + 4.0) / 6.0);
+                    half orange = smoothstep(0.5, 0.65, sat) * (1 - smoothstep(0.035, 0.06, abs(hue - 0.055))) * smoothstep(0.35, 0.5, mx);
+                    if (orange > 0.001)
+                    {
+                        half h = frac(hue + _SuitHueShift) * 6.0;
+                        half3 rgb = saturate(half3(abs(h - 3.0) - 1.0, 2.0 - abs(h - 2.0), 2.0 - abs(h - 4.0)));
+                        half3 shifted = ((rgb - 1.0) * sat * 0.82 + 1.0) * mx * 0.94; // a touch softer than the source orange
+                        albedo.rgb = pow(lerp(c, shifted, orange), 2.2);
+                    }
+                }
 
                 Light light = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
                 half wrapped = saturate((dot(n, light.direction) + _LightWrap) / (1 + _LightWrap));

@@ -154,6 +154,21 @@ public class RescueHud : MonoBehaviour
         var cam = Camera.main;
         MissionPanel(cam);
 
+        // Name tags over the other crew members (in their suit colour).
+        if (cam != null)
+            foreach (var p in FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None))
+            {
+                if (!p.IsSpawned || p.IsNpc || p.IsLocalPlayer) continue;
+                Vector3 head = p.transform.position + Vector3.up * 1.15f;
+                Vector3 sp = cam.WorldToScreenPoint(head);
+                float dist = Vector3.Distance(cam.transform.position, head);
+                if (sp.z < 0.3f || dist > 80f) continue;
+                marker.normal.textColor = CrewVisual.SuitColor(p.OwnerClientId);
+                string tag = p.SeatedAsPilot.Value ? $"Crew {p.OwnerClientId + 1} (pilot)" : $"Crew {p.OwnerClientId + 1}";
+                Outlined(new Rect(sp.x - 80, Screen.height - sp.y - 24, 160, 22), tag, marker);
+            }
+        marker.normal.textColor = new Color(1f, 0.84f, 0.2f);
+
         // Speech bubbles over survivors' heads.
         foreach (var s in FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.None))
         {
