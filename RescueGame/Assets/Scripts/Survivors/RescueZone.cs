@@ -44,14 +44,8 @@ public class RescueZone : NetworkBehaviour
         int roughPenalty = s.RoughMoments * 150;
         int pay = Mathf.Max(100, basePay + speedBonus - roughPenalty);
         int stars = Mathf.Clamp(5 - s.RoughMoments - (minutes > 4f ? 1 : 0), 1, 5);
-        string review = stars switch
-        {
-            5 => "Lovely boys. Five stars. Would get winched again.",
-            4 => "Very nice. Bit bumpy. Four stars.",
-            3 => "I've had worse. I've had better. Three stars.",
-            2 => "My hip will never forgive you. Two stars.",
-            _ => "One star. I'm telling the newspaper.",
-        };
+        string review = s.Review(stars);
+        pay += s.payBonus;
         Rescued.Value++;
         Money.Value += pay;
         string text = $"{s.displayName}: \"{review}\"  {new string('*', stars)}  +${pay:N0}";

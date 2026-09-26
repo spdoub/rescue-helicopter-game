@@ -9,6 +9,9 @@ public class RescuePilot
 {
     enum Phase { TakeOff, ToPickup, Hold, ToHospital, Land, Done }
 
+    readonly SurvivorBrain.Kind target;
+    public RescuePilot(SurvivorBrain.Kind target = SurvivorBrain.Kind.StrongGrandma) => this.target = target;
+
     Phase phase;
     float holdY; Vector3 holdXZ;
     float phaseSince;
@@ -22,7 +25,7 @@ public class RescuePilot
     public HelicopterInput Tick(float t)
     {
         if (heli == null) heli = Object.FindAnyObjectByType<NetworkHelicopter>();
-        if (survivor == null) survivor = Object.FindAnyObjectByType<SurvivorBrain>();
+        if (survivor == null) survivor = SurvivorBrain.Find(target);
         if (zone == null) zone = Object.FindAnyObjectByType<RescueZone>();
         if (heli == null) return default;
 
@@ -46,7 +49,9 @@ public class RescuePilot
             {
                 if (survivor == null) return Hover(h.position + Vector3.up * 0f, 0f);
                 // Put the hoist tip (helicopter-local 1.4, _, 0.85) straight above the survivor.
-                Vector3 target = survivor.transform.position - h.rotation * new Vector3(1.4f, 0f, 0.85f);
+                // (Recliner Guy: over his chair's lifting strap)
+                Vector3 over = survivor.chair != null ? survivor.chair.liftPoint.position : survivor.transform.position;
+                Vector3 target = over - h.rotation * new Vector3(1.4f, 0f, 0.85f);
                 // Hover height is fixed once over the pickup (following her up while she's
                 // winched up would just climb forever).
                 if (phase == Phase.ToPickup) holdY = survivor.transform.position.y + 9f;
@@ -61,14 +66,14 @@ public class RescuePilot
             {
                 if (zone == null) return Hover(h.position, 0f);
                 Vector3 target = zone.transform.position + Vector3.up * 14f;
-                if (Flat(target - h.position).magnitude < 1.5f && vel.magnitude < 1.2f) Next(Phase.Land);
-                return FlyTo(h, target, 8f, 0f);
+                if (Flat(target - h.position).magnitude < 1.5f && vel.magnitude < 1.2f && Mathf.Abs(Mathf.DeltaAngle(h.eulerAngles.y, LandHeading())) < 10f) Next(Phase.Land);
+                return FlyTo(h, target, 8f, Flat(target - h.position).magnitude < 20f ? LandHeading() : 0f);
             }
 
             case Phase.Land:
             {
                 Vector3 target = zone.transform.position;
-                var input = FlyTo(h, target, 1.5f, 0f);
+                var input = FlyTo(h, target, 1.5f, LandHeading());
                 float height = h.position.y - zone.transform.position.y;
                 input.collective = height > 3f ? -0.6f : -0.25f;
                 if (heli.GetComponent<HelicopterController>().IsLanded || (height < 0.6f && Mathf.Abs(vel.y) < 0.2f)) Next(Phase.Done);
@@ -76,8 +81,18 @@ public class RescuePilot
             }
 
             default:
-                return default; // landed: collective at rest, engine idles
+                // Landed at the hospital. When the next call comes in, go again.
+                if (survivor != null && survivor.Current == SurvivorBrain.State.Waiting && since > 2f) Next(Phase.TakeOff);
+                return default; // collective at rest, engine idles
         }
+    }
+
+    /// <summary>Land nose-in toward the hospital door, so the tail points away from the building.</summary>
+    float LandHeading()
+    {
+        if (zone == null || zone.exitPoint == null) return 0f;
+        Vector3 d = Flat(zone.exitPoint.position - zone.transform.position);
+        return d.sqrMagnitude > 0.01f ? Quaternion.LookRotation(d).eulerAngles.y : 0f;
     }
 
     static bool CrewAboard()

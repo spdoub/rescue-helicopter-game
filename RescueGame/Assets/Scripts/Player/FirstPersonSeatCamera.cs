@@ -151,7 +151,9 @@ public class FirstPersonSeatCamera : MonoBehaviour
                     float bob = visual != null ? visual.EyePosition.y - steady.y : 0f;
                     bobHeight = Mathf.Lerp(bobHeight, bob, 1f - Mathf.Exp(-10f * Time.deltaTime));
                     Vector3 want = steady + headLean + facing * eyeForward + Vector3.up * bobHeight;
-                    transform.position = me.OnHelicopter.Value ? KeepOutOfWallsRiding(helicopter, steady, want) : KeepOutOfWalls(steady, want);
+                    // (if the eye point itself got shoved into a thin wall, look from the body's centre instead)
+                    Vector3 from = Physics.CheckSphere(steady, 0.06f, GameLayers.CameraSolid, QueryTriggerInteraction.Ignore) ? me.transform.position : steady;
+                    transform.position = me.OnHelicopter.Value || InsideCabin(helicopter, steady) ? KeepOutOfWallsRiding(helicopter, from, want) : KeepOutOfWalls(from, want);
                 }
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }
@@ -175,12 +177,32 @@ public class FirstPersonSeatCamera : MonoBehaviour
         return toPhys.inverse.MultiplyPoint3x4(hit);
     }
 
+    /// <summary>Is this point inside the helicopter's cabin/cockpit volume (riding it, even with your feet off the floor)?</summary>
+    public static bool InsideCabin(Transform heli, Vector3 world)
+    {
+        if (heli == null) return false;
+        Vector3 l = heli.InverseTransformPoint(world);
+        return Mathf.Abs(l.x) < 1.25f && l.y > 0.6f && l.y < 3.1f && l.z > -0.8f && l.z < 3.2f;
+    }
+
     /// <summary>Maps a point on the helicopter as drawn to where the same point is for physics right now.</summary>
     public static Matrix4x4 RenderToPhysics(Transform heli)
     {
         var rb = heli ? heli.GetComponent<Rigidbody>() : null;
         if (rb == null || rb.isKinematic || rb.interpolation == RigidbodyInterpolation.None) return Matrix4x4.identity;
         return Matrix4x4.TRS(rb.position, rb.rotation, Vector3.one) * heli.worldToLocalMatrix;
+    }
+
+    /// <summary>A raycast from something drawn riding the helicopter (a foot, a hand): done where the
+    /// helicopter is for physics, with the hit brought back to where it's drawn.</summary>
+    public static bool RaycastRiding(Transform heli, Vector3 origin, Vector3 dir, out RaycastHit hit, float dist, int mask)
+    {
+        Matrix4x4 toPhys = RenderToPhysics(heli);
+        if (!Physics.Raycast(toPhys.MultiplyPoint3x4(origin), toPhys.MultiplyVector(dir), out hit, dist, mask, QueryTriggerInteraction.Ignore)) return false;
+        Matrix4x4 back = toPhys.inverse;
+        hit.point = back.MultiplyPoint3x4(hit.point);
+        hit.normal = back.MultiplyVector(hit.normal);
+        return true;
     }
 
     /// <summary>Pull the camera back toward your head if it would poke into a wall or the helicopter.</summary>

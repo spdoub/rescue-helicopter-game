@@ -33,7 +33,7 @@ public class NetworkPlayer : NetworkBehaviour
     /// <summary>Computer-controlled (a survivor): no keyboard, no camera, the brain supplies the controls.</summary>
     public bool IsNpc => brain != null;
     /// <summary>This machine's own human-controlled crew member?</summary>
-    public bool IsLocalPlayer => IsOwner && !IsNpc;
+    public new bool IsLocalPlayer => IsOwner && !IsNpc;
     SurvivorBrain brain;
     public NetworkVariable<bool> OnHelicopter = new();
     public NetworkVariable<bool> KnockedDown = new();

@@ -1163,6 +1163,7 @@ GameObject:
   - component: {fileID: 6969054271217634275}
   - component: {fileID: 2747997366404620103}
   - component: {fileID: 5530737369661222333}
+  - component: {fileID: 1907543349629772805}
   m_Layer: 8
   m_Name: Survivor_Grandma
   m_TagString: Untagged
@@ -1280,7 +1281,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 234291255
+  GlobalObjectIdHash: 248183851
   InScenePlacedSourceGlobalObjectIdHash: 3197619395
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -1455,7 +1456,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorBrain
   ShowTopMostFoldoutHeaderGroup: 1
+  kind: 0
   displayName: Grandma
+  chair: {fileID: 0}
+  payBonus: 0
   hookNoticeRange: 4
   yankForce: 2600
   yankSeconds: 0.7
@@ -1605,6 +1609,68 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+--- !u!114 &1907543349629772805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3647230069595853811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7caa57527334840418f994590418d9c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SurvivorVoice
+  lines:
+  - key: are_we_nearly_there
+    clip: {fileID: 8300000, guid: 92c6b893e853f4c7eaa8be9f21cbb8aa, type: 3}
+  - key: come_down_here
+    clip: {fileID: 8300000, guid: 92c7aafed192a479b87a9b535d2a587c, type: 3}
+  - key: hnnngh
+    clip: {fileID: 8300000, guid: ef83c00b5daa341fba423ac34214bea5, type: 3}
+  - key: hup
+    clip: {fileID: 8300000, guid: 162de99d4320f474089f1ccd774d9d43, type: 3}
+  - key: i_brought_biscuits_don_t_tell_the_others
+    clip: {fileID: 8300000, guid: ac316ede385fb48728ac4dffe504a06c, type: 3}
+  - key: i_ll_have_your_licence_for_this
+    clip: {fileID: 8300000, guid: de1907533082b4446834294fe8d1e092, type: 3}
+  - key: i_ve_carried_heavier_shopping
+    clip: {fileID: 8300000, guid: 53b37d24eb9a544359bb0f1f7b8fb6ca, type: 3}
+  - key: i_ve_had_worse_i_ve_had_better_three_stars
+    clip: {fileID: 8300000, guid: dc218132d0abe4372bb0123d59ef99e9, type: 3}
+  - key: is_that_all_you_ve_got
+    clip: {fileID: 8300000, guid: 442837e3b1c534a46b0f031b08eb9502, type: 3}
+  - key: lovely_boys_five_stars_would_get_winched_again
+    clip: {fileID: 8300000, guid: 50289127274a843cbae948816a64ef4e, type: 3}
+  - key: my_harold_flew_smoother_than_this_he_was_a_bus_d
+    clip: {fileID: 8300000, guid: a56ce72a7c2264d6eb68b6c00f66812c, type: 3}
+  - key: my_hip_my_good_hip
+    clip: {fileID: 8300000, guid: 89d3f356313f9446ba251487352c21d2, type: 3}
+  - key: my_hip_will_never_forgive_you_two_stars
+    clip: {fileID: 8300000, guid: f236d9deecb524c41b139fec46cd5f84, type: 3}
+  - key: my_turn_to_pull
+    clip: {fileID: 8300000, guid: 2f601cbdc5b444827ac2a4337731062c, type: 3}
+  - key: one_star_i_m_telling_the_newspaper
+    clip: {fileID: 8300000, guid: c0c787f5f3cd14cf68ff6beab2415374, type: 3}
+  - key: oof_again_but_better
+    clip: {fileID: 8300000, guid: 8737abb0ca6f349d98149db7f4db14a5, type: 3}
+  - key: ooh_it_s_like_the_rollercoaster_at_blackpool
+    clip: {fileID: 8300000, guid: d24fa8cfac2a8431ea2523a709a0d09f, type: 3}
+  - key: pull_harder_sonny
+    clip: {fileID: 8300000, guid: c265e7fa3f24c4e708085180a7af04a9, type: 3}
+  - key: put_your_back_into_it
+    clip: {fileID: 8300000, guid: 726e3e40a2a7c4adfbb8b508185bb0eb, type: 3}
+  - key: right_seatbelt_where_s_the_tea
+    clip: {fileID: 8300000, guid: 64afd05c2393340f99b13bdc6af2f746, type: 3}
+  - key: very_nice_bit_bumpy_four_stars
+    clip: {fileID: 8300000, guid: d0fbbdaa50bed4ee184636a583b0763b, type: 3}
+  - key: watch_it
+    clip: {fileID: 8300000, guid: 84068f85615c34823becb6fefda06dea, type: 3}
+  - key: well_that_was_an_experience
+    clip: {fileID: 8300000, guid: c6062da7f521046048640aaa1bea6cfe, type: 3}
+  - key: yoo_hoo_down_here
+    clip: {fileID: 8300000, guid: 4fbfb24c9cefb4a18b357183f4d4d04e, type: 3}
+  volume: 1
 --- !u!1 &4637948387814146817
 GameObject:
   m_ObjectHideFlags: 0

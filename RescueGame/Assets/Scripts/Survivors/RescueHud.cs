@@ -10,7 +10,8 @@ public class RescueHud : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create() => DontDestroyOnLoad(new GameObject("RescueHud").AddComponent<RescueHud>());
 
-    GUIStyle bubble, banner, money;
+    GUIStyle bubble, banner, money, title, objective, fuelStyle, marker;
+    NetworkHelicopter heli; HeliFuel fuel;
     string lastReport = "";
     float reportShownAt = -100f;
     const float ReportSeconds = 9f;
@@ -26,6 +27,14 @@ public class RescueHud : MonoBehaviour
         banner.normal.textColor = new Color(1f, 0.9f, 0.6f);
         money = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Bold };
         money.normal.textColor = new Color(1f, 0.92f, 0.55f);
+        // Concept 3's HUD: chunky yellow title, white timer, black outline.
+        title = new GUIStyle(GUI.skin.label) { fontSize = 34, fontStyle = FontStyle.Bold };
+        title.normal.textColor = new Color(1f, 0.84f, 0.2f);
+        objective = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold, wordWrap = true };
+        objective.normal.textColor = Color.white;
+        fuelStyle = new GUIStyle(objective) { fontSize = 24 };
+        marker = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
+        marker.normal.textColor = new Color(1f, 0.84f, 0.2f);
     }
 
     static Texture2D Solid(Color c)
@@ -33,10 +42,79 @@ public class RescueHud : MonoBehaviour
         var t = new Texture2D(1, 1); t.SetPixel(0, 0, c); t.Apply(); return t;
     }
 
+    /// <summary>Text with a thick black outline (readable over the bright sky).</summary>
+    static void Outlined(Rect r, string text, GUIStyle style)
+    {
+        var c = style.normal.textColor;
+        style.normal.textColor = new Color(0f, 0f, 0f, 0.9f);
+        for (int dx = -2; dx <= 2; dx += 2) for (int dy = -2; dy <= 2; dy += 2)
+            if (dx != 0 || dy != 0) GUI.Label(new Rect(r.x + dx, r.y + dy, r.width, r.height), text, style);
+        style.normal.textColor = c;
+        GUI.Label(r, text, style);
+    }
+
+    void MissionPanel(Camera cam)
+    {
+        if (heli == null) { heli = FindAnyObjectByType<NetworkHelicopter>(); if (heli) fuel = heli.GetComponent<HeliFuel>(); }
+        var all = FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.InstanceID);
+        Outlined(new Rect(24, 18, 600, 44), "CO-OP RESCUE", title);
+        if (fuel != null && fuel.IsSpawned)
+        {
+            float secs = fuel.SecondsLeft;
+            bool low = secs < 60f;
+            fuelStyle.normal.textColor = low && Mathf.Repeat(Time.time, 1f) < 0.5f ? new Color(1f, 0.35f, 0.25f) : Color.white;
+            string refuel = fuel.Refuelling ? "  (refuelling)" : fuel.Fuel.Value <= 0f ? "  OUT OF FUEL - LAND NOW" : "";
+            Outlined(new Rect(26, 60, 600, 32), $"FUEL REMAINING: {Mathf.FloorToInt(secs / 60f):00}:{Mathf.FloorToInt(secs % 60f):00}{refuel}", fuelStyle);
+        }
+
+        float y = 94f; bool anyoneAboard = false;
+        foreach (var s in all)
+        {
+            if (!s.IsSpawned) continue;
+            string them = s.kind == SurvivorBrain.Kind.StrongGrandma ? "her" : "him";
+            string goal;
+            switch (s.Current)
+            {
+                case SurvivorBrain.State.Waiting:
+                    goal = s.kind == SurvivorBrain.Kind.ReclinerGuy ? $"Pick up {s.displayName} - hook his chair's strap" : $"Pick up {s.displayName} from the rooftop";
+                    Marker(cam, s.transform.position + Vector3.up * 1.8f, s.displayName);
+                    break;
+                case SurvivorBrain.State.Hooked: goal = $"Winch {them} up!  (hold R at the winch box)"; break;
+                case SurvivorBrain.State.Boarding: goal = $"Get {them} in!"; break;
+                case SurvivorBrain.State.Seated: goal = $"Fly {s.displayName} to the hospital and land on the pad"; anyoneAboard = true; break;
+                default:
+                    float next = s.NextCallIn;
+                    goal = next >= 0f ? $"{s.displayName} delivered!  Next call in {Mathf.CeilToInt(next)}..." : $"{s.displayName} delivered!";
+                    break;
+            }
+            Outlined(new Rect(26, y, 620, 30), "- " + goal, objective);
+            y += 28f;
+        }
+        if (anyoneAboard && RescueZone.All.Count > 0) Marker(cam, RescueZone.All[0].transform.position + Vector3.up * 4f, "HOSPITAL");
+    }
+
+    /// <summary>A floating marker with distance; clamped to the screen edge with an arrow when off screen.</summary>
+    void Marker(Camera cam, Vector3 world, string label)
+    {
+        if (cam == null) return;
+        Vector3 sp = cam.WorldToScreenPoint(world);
+        float dist = Vector3.Distance(cam.transform.position, world);
+        bool behind = sp.z < 0f;
+        if (behind) { sp.x = Screen.width - sp.x; sp.y = Screen.height - sp.y; }
+        float m = 40f;
+        bool off = behind || sp.x < m || sp.x > Screen.width - m || sp.y < m || sp.y > Screen.height - m;
+        float x = Mathf.Clamp(sp.x, m, Screen.width - m), yy = Mathf.Clamp(Screen.height - sp.y, m, Screen.height - m);
+        if (behind) yy = Screen.height - m;
+        string icon = off ? (x <= m ? "◀" : x >= Screen.width - m ? "▶" : yy <= m ? "▲" : "▼") : "▼";
+        Outlined(new Rect(x - 100, yy - 44, 200, 24), $"{label}  {dist:0} m", marker);
+        Outlined(new Rect(x - 20, yy - 22, 40, 28), icon, marker);
+    }
+
     void OnGUI()
     {
         Styles();
         var cam = Camera.main;
+        MissionPanel(cam);
 
         // Speech bubbles over survivors' heads.
         foreach (var s in FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.None))

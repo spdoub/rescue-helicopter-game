@@ -76,16 +76,19 @@ def main() -> None:
     ap.add_argument("name")
     ap.add_argument("--voice", default=DEFAULT_VOICE)
     ap.add_argument("--clean", action="store_true", help="also save an unfiltered copy")
+    ap.add_argument("--no-radio", action="store_true", help="in-person voice: save only the unfiltered line as <name>.wav")
+    ap.add_argument("--out-dir", default=None, help="folder for the .wav (default Assets/Audio/Voice)")
     a = ap.parse_args()
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out = Path(a.out_dir) if a.out_dir else OUT_DIR
+    out.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(suffix=".mp3") as mp3:
         mp3.write(tts(a.text, a.voice, load_key()))
         mp3.flush()
-        to_wav(Path(mp3.name), OUT_DIR / f"{a.name}.wav", radio=True)
-        if a.clean:
-            to_wav(Path(mp3.name), OUT_DIR / f"{a.name}_clean.wav", radio=False)
-    print(OUT_DIR / f"{a.name}.wav")
+        to_wav(Path(mp3.name), out / f"{a.name}.wav", radio=not a.no_radio)
+        if a.clean and not a.no_radio:
+            to_wav(Path(mp3.name), out / f"{a.name}_clean.wav", radio=False)
+    print(out / f"{a.name}.wav")
 
 
 if __name__ == "__main__":

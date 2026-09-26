@@ -16,7 +16,7 @@ public static class RescueLevelBuilder
     [MenuItem("Tools/Rescue Heli/Build Rescue Level")]
     public static void Build()
     {
-        foreach (var n in new[] { "Grandma", "Hospital", "HospitalPad" }) { var o = GameObject.Find(n); if (o) Object.DestroyImmediate(o); }
+        foreach (var n in new[] { "Grandma", "Hospital", "HospitalPad", "ReclinerChair", "ReclinerGuy" }) { var o = GameObject.Find(n); if (o) Object.DestroyImmediate(o); }
 
         // ---- the survivor, on the roof, on the side facing the helipad
         var roof = GameObject.Find("Environment/Block_3").GetComponent<Renderer>().bounds;
@@ -26,6 +26,18 @@ public static class RescueLevelBuilder
         float halfH = g.GetComponent<CapsuleCollider>().height / 2f;
         Vector3 spot = new Vector3(roof.center.x - 2f, roof.max.y + halfH + 0.05f, roof.min.z + 4f);
         g.transform.SetPositionAndRotation(spot, Quaternion.LookRotation(-new Vector3(spot.x, 0f, spot.z)));
+
+        // ---- Recliner Guy in his armchair on the low roof of Block_6 (the concept 3 scene)
+        var b6 = GameObject.Find("Environment/Block_6").GetComponent<Collider>().bounds;
+        var chair = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Recliner.prefab"));
+        chair.name = "ReclinerChair";
+        chair.transform.SetPositionAndRotation(new Vector3(b6.center.x, b6.max.y + 0.02f, b6.center.z),
+            Quaternion.LookRotation(-new Vector3(b6.center.x, 0f, b6.center.z)));
+        var guy = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Survivor_ReclinerGuy.prefab"));
+        guy.name = "ReclinerGuy";
+        guy.GetComponent<SurvivorBrain>().chair = chair.GetComponent<Recliner>();
+        var seatT = chair.GetComponent<Recliner>().seatPoint;
+        guy.transform.SetPositionAndRotation(seatT.position + Vector3.up * guy.GetComponent<CapsuleCollider>().height / 2f, seatT.rotation);
 
         // ---- the hospital
         var root = new GameObject("Hospital").transform;
@@ -52,23 +64,18 @@ public static class RescueLevelBuilder
             Block(root, "PadLight_" + i, new Vector3(Mathf.Cos(a) * 7.4f, 0.16f, Mathf.Sin(a) * 7.4f), new Vector3(0.18f, 0.12f, 0.18f), Tint("PadLight", new Color(1f, 0.85f, 0.35f)), false);
         }
 
-        // building behind the pad, door facing it
-        Block(root, "HospitalBuilding", new Vector3(0f, 4.5f, -15f), new Vector3(16f, 9f, 10f), cream, true);
-        Block(root, "Roofline", new Vector3(0f, 9.1f, -15f), new Vector3(16.4f, 0.3f, 10.4f), concrete, true);
-        Block(root, "Door", new Vector3(0f, 1.2f, -9.98f), new Vector3(2.2f, 2.4f, 0.1f), glass, false);
-        Block(root, "DoorFrame", new Vector3(0f, 2.5f, -9.95f), new Vector3(2.6f, 0.2f, 0.12f), dark, false);
-        Block(root, "Canopy", new Vector3(0f, 2.8f, -9.2f), new Vector3(4f, 0.15f, 1.6f), white, true);
-        for (int i = 0; i < 4; i++) for (int j = 0; j < 2; j++)
-        {
-            float x = -6f + i * 4f; if (Mathf.Abs(x) < 2f && j == 0) continue;
-            Block(root, $"Window_{i}_{j}", new Vector3(x, 4.2f + j * 2.6f, -9.97f), new Vector3(1.6f, 1.3f, 0.08f), glass, false);
-        }
+        // building behind the pad (generated brick, like the rest of the city), glass entrance facing the pad
+        CityBuilder.MakeBuilding(root, "HospitalBuilding", root.TransformPoint(new Vector3(0f, 0f, -19f)), root.rotation, 16f, 10f, 9f, "Brick_Tan",
+            new System.Random(7), Vector3.one * 9999f, bodyCollider: true, forceShopFace: 2);
+        Block(root, "Canopy", new Vector3(0f, 3.2f, -13.2f), new Vector3(5f, 0.15f, 1.8f), white, true);
+        Block(root, "CanopyPostL", new Vector3(-2.3f, 1.6f, -12.5f), new Vector3(0.12f, 3.2f, 0.12f), white, false);
+        Block(root, "CanopyPostR", new Vector3(2.3f, 1.6f, -12.5f), new Vector3(0.12f, 3.2f, 0.12f), white, false);
         // big green cross sign on the front
-        Block(root, "CrossV", new Vector3(5.5f, 7.2f, -9.9f), new Vector3(0.6f, 1.8f, 0.12f), green, false);
-        Block(root, "CrossH", new Vector3(5.5f, 7.2f, -9.9f), new Vector3(1.8f, 0.6f, 0.12f), green, false);
+        Block(root, "CrossV", new Vector3(5.5f, 7.2f, -13.75f), new Vector3(0.6f, 1.8f, 0.12f), green, false);
+        Block(root, "CrossH", new Vector3(5.5f, 7.2f, -13.75f), new Vector3(1.8f, 0.6f, 0.12f), green, false);
 
         var exit = new GameObject("ExitPoint").transform;
-        exit.SetParent(root, false); exit.localPosition = new Vector3(0f, 0f, -9.2f);
+        exit.SetParent(root, false); exit.localPosition = new Vector3(0f, 0f, -13.2f);
 
         // drop-off zone over the pad (a trigger: nothing bumps into it)
         var zoneGo = new GameObject("HospitalPad");

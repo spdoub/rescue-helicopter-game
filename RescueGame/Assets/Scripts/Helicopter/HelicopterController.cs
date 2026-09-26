@@ -46,6 +46,10 @@ public class HelicopterController : MonoBehaviour
 
     public bool engineOn = true;
 
+    [Header("Engine power")]
+    [Tooltip("1 = full power. Out of fuel drops this so the helicopter sinks (see HeliFuel).")]
+    [Range(0f, 1f)] public float power = 1f;
+
     [Header("Networking")]
     [Tooltip("Read the keyboard/gamepad on this machine. Turned off when NetworkHelicopter feeds input from the pilot.")]
     public bool useLocalInput = true;
@@ -119,6 +123,8 @@ public class HelicopterController : MonoBehaviour
 
         // Steer vertical speed toward a target (0 when you let go = altitude hold).
         float targetClimb = collective >= 0f ? collective * maxClimbSpeed : collective * maxDescentSpeed;
+        // Losing power: can't climb, and the best it can do is a slow sinking glide.
+        if (power < 1f) targetClimb = Mathf.Min(targetClimb * power, -3.5f * (1f - power));
         float verticalAccel = -Physics.gravity.y + (targetClimb - rb.linearVelocity.y) * verticalResponse;
 
         float liftAccel = verticalAccel / Mathf.Max(upDot, 0.5f);

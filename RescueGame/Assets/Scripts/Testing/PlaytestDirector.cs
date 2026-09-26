@@ -361,29 +361,12 @@ public class PlaytestDirector : MonoBehaviour
             }
 
             case "rescue_crew": // winch operator for a full rescue (someone else flies with the "rescue" pilot bot)
-            {
-                NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
-                SurvivorBrain G() => FindAnyObjectByType<SurvivorBrain>();
-                Add(new GoTo("walk to door", door, 0.6f));
-                Add(new GoTo("climb in", cabin, 0.35f, 8f));
-                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
-                Add(new GoTo("to the winch box", d => d.Heli.transform.TransformPoint(new Vector3(0.45f, 1f, 1.0f)), 0.25f, 6f));
-                Add(new Until("at the winch box", d => d.Me.NearWinch, 2f));
-                Add(new WinchUntil("over the survivor", 0, d =>
-                {
-                    var g = G(); if (g == null) return false;
-                    Vector3 tip = W(d).TipPosition, gp = g.transform.position; tip.y = gp.y = 0f;
-                    return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f;
-                }, 60f));
-                Add(new WinchUntil("let the hook down to her", -1, d => W(d).HookEyePosition.y < G().transform.position.y + 0.6f || G().Current != SurvivorBrain.State.Waiting, 20f));
-                Add(new WinchUntil("she grabs the hook", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
-                Add(new WinchUntil("let her get a grip", 0, d => d.StepTime > 1.5f, 3f));
-                Add(new WinchUntil("reel her up", 1, d => G().Current == SurvivorBrain.State.Boarding || G().Current == SurvivorBrain.State.Seated, 30f));
-                Add(new WinchUntil("she's strapped in", 0, d => G().Current == SurvivorBrain.State.Seated, 20f));
-                Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 120f));
-                Add(new Until("payout", d => RescueZone.All.Count > 0 && RescueZone.All[0].Rescued.Value > 0, 20f));
+                RescueRounds(SurvivorBrain.Kind.StrongGrandma, 2, door, cabin);
                 break;
-            }
+
+            case "rescue_recliner": // same, for Recliner Guy (pilot bot "rescue-recliner")
+                RescueRounds(SurvivorBrain.Kind.ReclinerGuy, 1, door, cabin);
+                break;
 
             case "passenger": // stand in the cabin (holding on half the time) while someone flies hard
                 Add(new GoTo("walk to door", door, 0.6f));
@@ -457,6 +440,39 @@ public class PlaytestDirector : MonoBehaviour
         if (done) current = null;
     }
 
+    /// <summary>Winch operator: board, hold the winch box, then for each call: wait until over the
+    /// survivor, lower the hook to them, wait for them to be hooked, reel in, wait for delivery.</summary>
+    void RescueRounds(SurvivorBrain.Kind kind, int rounds, Func<PlaytestDirector, Vector3> door, Func<PlaytestDirector, Vector3> cabin)
+    {
+        void Add(Step s) => steps.Enqueue(s);
+        NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
+        SurvivorBrain G() => SurvivorBrain.Find(kind);
+        float LowerTo(SurvivorBrain g) => g.chair != null ? g.chair.liftPoint.position.y + 0.4f : g.transform.position.y + 0.6f;
+        Add(new GoTo("walk to door", door, 0.6f));
+        Add(new GoTo("climb in", cabin, 0.35f, 8f));
+        Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+        Add(new GoTo("to the winch box", d => d.Heli.transform.TransformPoint(new Vector3(0.45f, 1f, 1.0f)), 0.25f, 6f));
+        Add(new Until("at the winch box", d => d.Me.NearWinch, 2f));
+        for (int round = 1; round <= rounds; round++)
+        {
+            int r = round;
+            Add(new WinchUntil("over the survivor", 0, d =>
+            {
+                var g = G(); if (g == null) return false;
+                Vector3 tip = W(d).TipPosition, gp = g.chair != null ? g.chair.liftPoint.position : g.transform.position; tip.y = gp.y = 0f;
+                return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f;
+            }, 60f));
+            Add(new WinchUntil("let the hook down", -1, d => W(d).HookEyePosition.y < LowerTo(G()) || G().Current != SurvivorBrain.State.Waiting, 20f));
+            Add(new WinchUntil("survivor hooked", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
+            Add(new WinchUntil("let them settle", 0, d => d.StepTime > 1.5f, 3f));
+            Add(new WinchUntil("reel them up", 1, d => G().Current == SurvivorBrain.State.Boarding || G().Current == SurvivorBrain.State.Seated, 40f));
+            Add(new WinchUntil("aboard", 0, d => G().Current == SurvivorBrain.State.Seated, 20f));
+            Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 150f));
+            Add(new WinchUntil($"payout #{r}", 0, d => RescueZone.All.Count > 0 && RescueZone.All[0].Rescued.Value >= r, 20f));
+            if (r < rounds) Add(new WinchUntil("next call comes in", 0, d => G().Current == SurvivorBrain.State.Waiting, 40f));
+        }
+    }
+
     static Func<float, HelicopterInput> PilotPattern(string name) => name switch
     {
         "hover" => t => new HelicopterInput { collective = t < 3f ? 1f : 0f },
@@ -484,6 +500,7 @@ public class PlaytestDirector : MonoBehaviour
         },
         "takeoff-later" => t => new HelicopterInput { collective = t > 6f && t < 9f ? 1f : 0f },
         "rescue" => new RescuePilot().Tick,
+        "rescue-recliner" => new RescuePilot(SurvivorBrain.Kind.ReclinerGuy).Tick,
         _ => t => default,
     };
 
@@ -527,7 +544,8 @@ public class PlaytestDirector : MonoBehaviour
             float d = DistanceToSegment(c, hips, chest);
             if (d < 0.2f) Report("camera-inside-body", $"camera {d:F2} m from own spine (look pitch {me.LookPitch:F0})");
             // (riding: compare against the helicopter's walls where they are for physics, like the camera does)
-            Vector3 cp = me.OnHelicopter.Value && Heli ? FirstPersonSeatCamera.RenderToPhysics(Heli.transform).MultiplyPoint3x4(c) : c;
+            bool riding = Heli && (me.OnHelicopter.Value || FirstPersonSeatCamera.InsideCabin(Heli.transform, me.transform.position));
+            Vector3 cp = riding ? FirstPersonSeatCamera.RenderToPhysics(Heli.transform).MultiplyPoint3x4(c) : c;
             foreach (var col in Physics.OverlapSphere(cp, 0.04f, gameplay, QueryTriggerInteraction.Ignore))
                 Report("camera-in-scenery", col.name);
         }
@@ -537,7 +555,11 @@ public class PlaytestDirector : MonoBehaviour
             foreach (var (bone, isLeft) in new[] { (HumanBodyBones.LeftFoot, true), (HumanBodyBones.RightFoot, false) })
             {
                 Vector3 f = vis.BonePosition(bone);
-                if (Physics.Raycast(f + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 1f, gameplay, QueryTriggerInteraction.Ignore))
+                RaycastHit hit;
+                bool found = me.OnHelicopter.Value && Heli
+                    ? FirstPersonSeatCamera.RaycastRiding(Heli.transform, f + Vector3.up * 0.5f, Vector3.down, out hit, 1f, gameplay)
+                    : Physics.Raycast(f + Vector3.up * 0.5f, Vector3.down, out hit, 1f, gameplay, QueryTriggerInteraction.Ignore);
+                if (found)
                 {
                     float sink = hit.point.y - (f.y - 0.06f);
                     if (sink > 0.05f) Report("boot-in-ground", $"{(isLeft ? "left" : "right")} foot {sink:F2} m under the surface");
@@ -624,7 +646,7 @@ public class PlaytestDirector : MonoBehaviour
               .Append(',').Append(C(hk.x)).Append(',').Append(C(hk.y)).Append(',').Append(C(hk.z));
         }
         else sb.Append(",,,,,");
-        var sv = FindAnyObjectByType<SurvivorBrain>();
+        var sv = SurvivorBrain.Find(SurvivorBrain.Kind.StrongGrandma) ?? FindAnyObjectByType<SurvivorBrain>();
         if (sv != null && sv.IsSpawned)
         {
             var sp = sv.transform.position;

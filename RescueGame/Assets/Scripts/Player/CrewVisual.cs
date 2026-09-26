@@ -241,7 +241,12 @@ public class CrewVisual : MonoBehaviour
         float target = 0f;
         Vector3 fixedAnkle = ankle; Quaternion fixedRot = rot;
         int mask = GameLayers.Gameplay & ~(1 << GameLayers.Crew);
-        if (onFeet && Physics.Raycast(ankle + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 0.5f + footProbe, mask, QueryTriggerInteraction.Ignore))
+        var riding = player.OnHelicopter.Value ? FindHeli() : null; // riding: the floor we see is smoothed ahead of its collider
+        RaycastHit hit;
+        bool found = riding != null
+            ? FirstPersonSeatCamera.RaycastRiding(riding, ankle + Vector3.up * 0.5f, Vector3.down, out hit, 0.5f + footProbe, mask)
+            : Physics.Raycast(ankle + Vector3.up * 0.5f, Vector3.down, out hit, 0.5f + footProbe, mask, QueryTriggerInteraction.Ignore);
+        if (onFeet && found)
         {
             float minAnkle = hit.point.y + soleToAnkle;
             if (ankle.y < minAnkle + 0.02f)

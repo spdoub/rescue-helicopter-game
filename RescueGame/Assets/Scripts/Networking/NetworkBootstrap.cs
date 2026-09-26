@@ -17,7 +17,7 @@ using UnityEngine;
 ///   -takepilot          sit in the pilot seat as soon as connected (dev builds only)
 ///   -testboard          your crew member walks to the helicopter and jumps aboard (dev test)
 ///   -testgrab           your crew member looks down and holds on to the floor (dev test)
-///   -shot <file> [-shotpitch deg] [-shotview front|fp]   save a screenshot after 5 s and quit (dev test)
+///   -shot <file> [-shotpitch deg] [-shotview front|fp] [-shotat x,y,z,yaw,pitch[,fov]]   save a screenshot after 5 s and quit (dev test)
 ///   -netlog             print helicopter + crew positions once a second (for comparing machines)
 ///
 /// Uses Unity Transport (direct IP) for now. Steam is added later as a second transport.
@@ -100,6 +100,17 @@ public class NetworkBootstrap : MonoBehaviour
             }
             yield return null;
         }
+        // -shotat x,y,z,yaw,pitch : a free camera anywhere in the world (for showing places, not the player)
+        string at = ArgValue(System.Environment.GetCommandLineArgs(), "-shotat");
+        if (at != null && Camera.main != null)
+        {
+            var v = System.Array.ConvertAll(at.Split(','), x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture));
+            var cam = Camera.main;
+            var rig = cam.GetComponent<FirstPersonSeatCamera>(); if (rig) rig.enabled = false;
+            cam.transform.SetPositionAndRotation(new Vector3(v[0], v[1], v[2]), Quaternion.Euler(v.Length > 4 ? v[4] : 0f, v.Length > 3 ? v[3] : 0f, 0f));
+            if (v.Length > 5) cam.fieldOfView = v[5];
+            yield return null; yield return null;
+        }
         ScreenCapture.CaptureScreenshot(file);
         yield return new WaitForSeconds(1f);
         Application.Quit();
@@ -156,6 +167,7 @@ public class NetworkBootstrap : MonoBehaviour
 
     void Update()
     {
+        HelpToggle();
         if (!netLog || heli == null || Time.time < nextLogTime) return;
         nextLogTime = Time.time + 1f;
         string role = nm.IsHost ? "HOST" : nm.IsClient ? "CLIENT" : "OFFLINE";
@@ -171,9 +183,23 @@ public class NetworkBootstrap : MonoBehaviour
         Debug.Log($"[NetLog] {role} t={Time.time:F0} pilot={(heli.IsSpawned ? heli.PilotClientId.Value.ToString() : "-")} pos=({p.x:F1},{p.y:F1},{p.z:F1}) rot=({heli.transform.eulerAngles.x:F0},{heli.transform.eulerAngles.y:F0},{heli.transform.eulerAngles.z:F0}){crew}");
     }
 
+    bool helpOpen = true, helpAutoClosed;
+
+    void HelpToggle()
+    {
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        if (kb != null && kb.hKey.wasPressedThisFrame) helpOpen = !helpOpen;
+        if (!helpAutoClosed && Time.time > 20f) { helpAutoClosed = true; helpOpen = false; } // shown for the first 20 s
+    }
+
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(12, 12, 300, 230), GUI.skin.box);
+        if (!helpOpen)
+        {
+            GUI.Label(new Rect(12, Screen.height - 28, 300, 24), "H: help / invite friends");
+            return;
+        }
+        GUILayout.BeginArea(new Rect(12, Screen.height - 262, 320, 250), GUI.skin.box);
         if (nm.IsHost)
             GUILayout.Label($"Hosting - friends join at {localAddress}   Players: {nm.ConnectedClientsIds.Count}");
         else if (nm.IsConnectedClient)
@@ -198,7 +224,7 @@ public class NetworkBootstrap : MonoBehaviour
         GUILayout.Label("WASD walk, Shift run, Space jump, click to grab");
         GUILayout.Label(NetworkPlayer.Local != null && NetworkPlayer.Local.NearDoor ? "F: open / close door" : "F near a door: open / close it");
         if (NetworkPlayer.Local != null && NetworkPlayer.Local.NearWinch) GUILayout.Label("WINCH: hold R reel in, Q let out");
-        GUILayout.Label("Esc frees the mouse, click to look again");
+        GUILayout.Label("Esc frees the mouse, click to look again.  H hides this");
         GUILayout.EndArea();
     }
 }

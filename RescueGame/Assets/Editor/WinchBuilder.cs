@@ -62,6 +62,41 @@ public static class WinchBuilder
         Debug.Log("[Winch] hook built at " + hook.transform.position + (tipT ? "" : " (no M_HoistTip found!)"));
     }
 
+    [MenuItem("Tools/Rescue Heli/Wire Helicopter Audio")]
+    public static void WireAudio()
+    {
+        var heli = GameObject.Find("Helicopter");
+        var a = heli.GetComponent<HeliAudio>() ?? heli.AddComponent<HeliAudio>();
+        AudioClip C(string n) => AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/" + n + ".wav");
+        a.rotorLoop = C("rotor_loop"); a.winchMotor = C("winch_motor"); a.doorSlide = C("door_slide");
+        a.hookClank = C("hook_clank"); a.deliveredJingle = C("delivered_jingle");
+        EditorUtility.SetDirty(a);
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(heli.scene);
+        // searchlight beam + downwash dust (materials are assets so their shaders are kept in builds)
+        var lights = heli.GetComponent<HeliLights>() ?? heli.AddComponent<HeliLights>();
+        const string dir = "Assets/Materials/Effects/";
+        System.IO.Directory.CreateDirectory(dir);
+        var beam = AssetDatabase.LoadAssetAtPath<Material>(dir + "M_SearchlightBeam.mat");
+        if (beam == null) { beam = new Material(Shader.Find("RescueGame/Light Beam")); AssetDatabase.CreateAsset(beam, dir + "M_SearchlightBeam.mat"); }
+        var dust = AssetDatabase.LoadAssetAtPath<Material>(dir + "M_Dust.mat");
+        if (dust == null)
+        {
+            dust = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            dust.SetFloat("_Surface", 1f);
+            dust.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            dust.SetOverrideTag("RenderType", "Transparent");
+            dust.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            dust.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            dust.SetInt("_ZWrite", 0);
+            dust.renderQueue = 3000;
+            dust.SetColor("_BaseColor", new Color(0.85f, 0.72f, 0.56f, 0.35f));
+            AssetDatabase.CreateAsset(dust, dir + "M_Dust.mat");
+        }
+        lights.beamMaterial = beam; lights.dustMaterial = dust;
+        EditorUtility.SetDirty(lights);
+        Debug.Log("[Audio] helicopter sounds wired: " + (a.rotorLoop && a.winchMotor && a.doorSlide && a.hookClank && a.deliveredJingle));
+    }
+
     static void Part(GameObject parent, PrimitiveType type, string name, Vector3 pos, Vector3 scale, Vector3 euler, Material mat)
     {
         var p = GameObject.CreatePrimitive(type);

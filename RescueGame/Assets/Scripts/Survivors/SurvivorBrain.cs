@@ -15,13 +15,26 @@ using UnityEngine;
 ///  Boarding - hoisted up to the door: lets go and clambers into the cabin.
 ///  Seated   - straps into a bench seat and critiques the flying.
 ///  Delivered- helicopter lands in a RescueZone: she gets out, walks off, rates the trip.
+///
+/// Recliner Guy (never leaves his armchair):
+///  Waiting  - sits in his recliner complaining about the noise; the hook latches onto the chair's strap.
+///  Hooked   - chair and man (about 150 kg) hang on the cable: the helicopter really feels it.
+///  Boarding - winched up, the whole chair swings into the cabin and gets strapped down.
+///  Seated   - critiques the flying from his recliner.
+///  Delivered- the chair is set down on the hospital pad, him still in it.
 /// </summary>
 [RequireComponent(typeof(NetworkPlayer))]
 public class SurvivorBrain : NetworkBehaviour
 {
     public enum State : byte { Waiting, Hooked, Boarding, Seated, Delivered }
+    public enum Kind : byte { StrongGrandma, ReclinerGuy }
 
+    public Kind kind = Kind.StrongGrandma;
     public string displayName = "Grandma";
+    [Tooltip("Recliner Guy's chair.")]
+    public Recliner chair;
+    [Tooltip("Extra pay on delivery (heavier, needier survivors pay more).")]
+    public int payBonus;
     [Tooltip("How far (m, sideways) she'll shuffle over to grab the hook.")]
     public float hookNoticeRange = 4f;
     [Tooltip("Downward pull (N) of each yank on the cable.")]
@@ -48,10 +61,45 @@ public class SurvivorBrain : NetworkBehaviour
     Transform seat;
     RescueZone deliveredTo;
 
-    static readonly string[] HookedLines = { "Pull harder, sonny!", "I've carried heavier shopping!", "Is that all you've got?", "Put your back into it!" };
-    static readonly string[] YankLines = { "HNNNGH!", "Come down here!", "My turn to pull!" };
-    static readonly string[] SeatedLines = { "Ooh, it's like the rollercoaster at Blackpool.", "My Harold flew smoother than this. He was a bus driver.", "Are we nearly there?", "I brought biscuits, don't tell the others." };
-    static readonly string[] RoughLines = { "WATCH IT!", "I'll have your licence for this!", "My hip! My good hip!" };
+    class Personality
+    {
+        public string[] waiting, hooked, yank, seated, rough, reviews; // reviews: 5 stars .. 1 star
+        public string hup, settled, arrived, fell;
+    }
+
+    static readonly Personality GrandmaLines = new()
+    {
+        waiting = new[] { "Yoo-hoo! Down here!" },
+        hooked = new[] { "Pull harder, sonny!", "I've carried heavier shopping!", "Is that all you've got?", "Put your back into it!" },
+        yank = new[] { "HNNNGH!", "Come down here!", "My turn to pull!" },
+        seated = new[] { "Ooh, it's like the rollercoaster at Blackpool.", "My Harold flew smoother than this. He was a bus driver.", "Are we nearly there?", "I brought biscuits, don't tell the others." },
+        rough = new[] { "WATCH IT!", "I'll have your licence for this!", "My hip! My good hip!" },
+        reviews = new[] { "Lovely boys. Five stars. Would get winched again.", "Very nice. Bit bumpy. Four stars.", "I've had worse. I've had better. Three stars.", "My hip will never forgive you. Two stars.", "One star. I'm telling the newspaper." },
+        hup = "HUP!", settled = "Right. Seatbelt. Where's the tea?", arrived = "Well! That was an experience.", fell = "OOF! Again, but better.",
+    };
+
+    static readonly Personality ReclinerLines = new()
+    {
+        waiting = new[] { "Hey! Keep it down, I'm watching the game!", "I'm not going anywhere without my chair.", "You're blocking the signal!" },
+        hooked = new[] { "Careful with the chair! It's vintage.", "Is this covered by insurance?", "Don't mind me. Just reclining." },
+        yank = new string[0],
+        seated = new[] { "Got any snacks back here?", "Nice view. Still prefer the TV.", "Can you turn it up? No, the radio.", "This chair's been in three floods. Never left it." },
+        rough = new[] { "MY CHAIR!", "Hey! Watch the upholstery!", "I spilled my drink!" },
+        reviews = new[] { "Five stars. Didn't spill a drop.", "Four stars. Chair's got a new squeak.", "Three stars. Missed the second half.", "Two stars. My remote fell out.", "One star. I'm suing. From this chair." },
+        hup = "Whoa whoa whoa!", settled = "Yeah, this'll do. Wake me when we land.", arrived = "Right here's fine. Don't touch the chair.", fell = "Aw, come on!",
+    };
+
+    Personality L => kind == Kind.ReclinerGuy ? ReclinerLines : GrandmaLines;
+
+    /// <summary>The survivor of this kind in the scene (null if none).</summary>
+    public static SurvivorBrain Find(Kind k)
+    {
+        foreach (var s in FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.None)) if (s.kind == k) return s;
+        return null;
+    }
+
+    /// <summary>What they say about the trip (1-5 stars).</summary>
+    public string Review(int stars) => L.reviews[Mathf.Clamp(5 - stars, 0, 4)];
 
     void Awake()
     {
@@ -75,6 +123,8 @@ public class SurvivorBrain : NetworkBehaviour
         if (heli == null) return input;
         if (lineUntil > 0f && Time.time > lineUntil) { Line.Value = default; lineUntil = 0f; }
         float t = Time.time - stateSince;
+
+        if (kind == Kind.ReclinerGuy) { ReclinerThink(t); return input; }
 
         switch (Stage.Value)
         {
@@ -107,7 +157,7 @@ public class SurvivorBrain : NetworkBehaviour
                 {
                     Enter(State.Hooked);
                     if (RescueStartedAt < 0f) RescueStartedAt = Time.time;
-                    Say(Pick(HookedLines), 3f);
+                    Say(Pick(L.hooked), 3f);
                     nextYank = Time.time + yankEvery;
                 }
                 return;
@@ -119,7 +169,7 @@ public class SurvivorBrain : NetworkBehaviour
         {
             input.pitch = -65f;
             input.grabRight = Mathf.Repeat(Time.time * 1.6f, 1f) < 0.5f;
-            if (Time.time > nextRemark && toHeli.magnitude < 40f) { Say("Yoo-hoo! Down here!", 2.5f); nextRemark = Time.time + 9f; }
+            if (Time.time > nextRemark && toHeli.magnitude < 40f) { Say(Pick(L.waiting), 2.5f); nextRemark = Time.time + 9f; }
         }
     }
 
@@ -134,7 +184,7 @@ public class SurvivorBrain : NetworkBehaviour
         {
             // Lost her grip (or it snapped): fall, dust off, wait again.
             Enter(State.Waiting);
-            Say("OOF! Again, but better.", 3f);
+            Say(L.fell, 3f);
             return;
         }
 
@@ -145,7 +195,7 @@ public class SurvivorBrain : NetworkBehaviour
         {
             yankUntil = Time.time + yankSeconds;
             nextYank = Time.time + yankEvery;
-            Say(Pick(YankLines), 1.5f);
+            Say(Pick(L.yank), 1.5f);
         }
         if (Time.time < yankUntil && !reelingIn)
             winch.hook.AddForce(Vector3.down * yankForce, ForceMode.Force);
@@ -168,7 +218,7 @@ public class SurvivorBrain : NetworkBehaviour
         {
             seat = FreeSeat();
             if (seat == null) { Enter(State.Hooked); return; } // cabin full: keep hanging on
-            Say("HUP!", 1.2f);
+            Say(L.hup, 1.2f);
             float half = body.transform.position.y - body.Feet.y;
             swingFrom = heli.transform.InverseTransformPoint(transform.position);
             swingTo = heli.transform.InverseTransformPoint(seat.position) + Vector3.up * half;
@@ -190,38 +240,126 @@ public class SurvivorBrain : NetworkBehaviour
             Destroy(swing.gameObject); swing = null;
             me.SetPassengerSeat(seat);
             Enter(State.Seated);
-            Say("Right. Seatbelt. Where's the tea?", 3.5f);
+            Say(L.settled, 3.5f);
             nextRemark = Time.time + 12f;
         }
     }
 
     void Seated()
     {
+        Remarks();
+        if (!LandedAtDropOff(out var zone)) return;
+        float side = Mathf.Sign(heli.transform.InverseTransformPoint(zone.exitPoint ? zone.exitPoint.position : zone.transform.position).x);
+        me.SetPassengerSeat(null, heli.transform.TransformPoint(new Vector3(side * 1.9f, 0f, 0.5f)) + Vector3.up * 0.1f);
+        ReleaseSeat(seat); seat = null;
+        deliveredTo = zone;
+        Enter(State.Delivered);
+        Say(L.arrived, 3f);
+    }
+
+    /// <summary>In-flight commentary: complaints when it's rough (which costs stars), chatter otherwise.</summary>
+    void Remarks()
+    {
         var rb = heli.GetComponent<Rigidbody>();
         if (rb.angularVelocity.magnitude > 1.1f && Time.time > nextRemark - 6f)
         {
-            Say(Pick(RoughLines), 2f);
+            Say(Pick(L.rough), 2f);
             RoughMoments++;
             nextRemark = Time.time + 8f;
         }
         else if (Time.time > nextRemark)
         {
-            Say(Pick(SeatedLines), 4f);
+            Say(Pick(L.seated), 4f);
             nextRemark = Time.time + 14f;
         }
+    }
 
-        // Landed at a drop-off? Out she gets.
-        foreach (var zone in RescueZone.All)
+    bool LandedAtDropOff(out RescueZone zone)
+    {
+        zone = null;
+        var rb = heli.GetComponent<Rigidbody>();
+        if (rb.linearVelocity.magnitude > 0.8f || !heli.GetComponent<HelicopterController>().IsLanded) return false;
+        foreach (var z in RescueZone.All) if (z.Contains(heli.transform.position)) { zone = z; return true; }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ Recliner Guy
+
+    Vector3 chairFrom, chairMid, chairTo; Quaternion chairRotFrom;
+    static readonly Vector3 CabinChairSpot = new(-0.4f, 0.95f, 0.66f);   // helicopter space: left side of the cabin, facing forward, clear of the winch box
+    const float ChairSwingTime = 1.4f;
+
+    void ReclinerThink(float t)
+    {
+        if (chair == null) return;
+        if (!me.SeatedPassenger.Value && Stage.Value != State.Boarding) me.SetPassengerSeat(chair.seatPoint); // always in the chair
+        var hrb = heli.GetComponent<Rigidbody>();
+
+        switch (Stage.Value)
         {
-            if (!zone.Contains(heli.transform.position) || rb.linearVelocity.magnitude > 0.8f) continue;
-            if (!heli.GetComponent<HelicopterController>().IsLanded) continue;
-            float side = Mathf.Sign(heli.transform.InverseTransformPoint(zone.exitPoint ? zone.exitPoint.position : zone.transform.position).x);
-            me.SetPassengerSeat(null, heli.transform.TransformPoint(new Vector3(side * 1.9f, 0f, 0.5f)) + Vector3.up * 0.1f);
-            ReleaseSeat(seat); seat = null;
-            deliveredTo = zone;
-            Enter(State.Delivered);
-            Say("Well! That was an experience.", 3f);
-            break;
+            case State.Waiting:
+            {
+                float d = Vector3.Distance(heli.transform.position, chair.transform.position);
+                if (d < 45f && Time.time > nextRemark) { Say(Pick(L.waiting), 3f); nextRemark = Time.time + 10f; }
+                if (HookAvailable(out _) && Vector3.Distance(winch.hook.transform.TransformPoint(chair.hookCatch), chair.liftPoint.position) < 1.3f)
+                {
+                    chair.Latch(winch.hook);
+                    chair.IgnoreHeli(hrb, true);
+                    if (RescueStartedAt < 0f) RescueStartedAt = Time.time;
+                    Enter(State.Hooked);
+                    Say(Pick(L.hooked), 3f);
+                    nextRemark = Time.time + 8f;
+                }
+                break;
+            }
+            case State.Hooked:
+                if (!chair.Latched) { Enter(State.Waiting); Say(L.fell, 2.5f); break; }
+                if (Time.time > nextRemark) { Say(Pick(L.hooked), 3f); nextRemark = Time.time + 9f; }
+                if (winch.Length.Value < 0.9f && Vector3.Distance(chair.transform.position, winch.TipPosition) < 4.5f)
+                {
+                    chairFrom = heli.transform.InverseTransformPoint(chair.transform.position);
+                    chairRotFrom = Quaternion.Inverse(heli.transform.rotation) * chair.transform.rotation;
+                    chairTo = CabinChairSpot;
+                    chairMid = new Vector3(Mathf.Max(chairFrom.x, 1.4f) * 0.85f, heli.cabinFloorHeight + 0.5f, (chairFrom.z + chairTo.z) * 0.5f);
+                    chair.Unlatch();
+                    chair.IgnoreCrew(true); // swings in past whoever is at the door instead of bowling them over
+                    Enter(State.Boarding);
+                    Say(L.hup, 1.5f);
+                }
+                break;
+            case State.Boarding:
+            {
+                float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / ChairSwingTime));
+                Vector3 p = Vector3.Lerp(Vector3.Lerp(chairFrom, chairMid, k), Vector3.Lerp(chairMid, chairTo, k), k);
+                Quaternion r = Quaternion.Slerp(chairRotFrom, Quaternion.identity, k);
+                chair.Carry(heli.transform.TransformPoint(p), heli.transform.rotation * r);
+                if (t >= ChairSwingTime)
+                {
+                    chair.MountIn(hrb);
+                    chair.IgnoreCrew(false);
+                    Enter(State.Seated);
+                    Say(L.settled, 3.5f);
+                    nextRemark = Time.time + 12f;
+                }
+                break;
+            }
+            case State.Seated:
+                Remarks();
+                if (LandedAtDropOff(out var zone))
+                {
+                    float side = Mathf.Sign(heli.transform.InverseTransformPoint(zone.exitPoint ? zone.exitPoint.position : zone.transform.position).x);
+                    Vector3 spot = heli.transform.TransformPoint(new Vector3(side * 2.6f, 0f, 0.4f));
+                    if (Physics.Raycast(spot + Vector3.up * 3f, Vector3.down, out RaycastHit g, 6f, GameLayers.Gameplay & ~(1 << heli.gameObject.layer), QueryTriggerInteraction.Ignore)) spot = g.point;
+                    chair.SetDown(spot + Vector3.up * 0.02f, Quaternion.LookRotation(Flat(spot - heli.transform.position)), hrb);
+                    deliveredTo = zone;
+                    Enter(State.Delivered);
+                    Say(L.arrived, 3.5f);
+                }
+                break;
+            case State.Delivered:
+                if (!reported && t > 3f) { reported = true; reportedAt = Time.time; deliveredTo.Deliver(this); }
+                if (reported && Time.time - reportedAt > NextCallDelay) NewCall();
+                break;
         }
     }
 
@@ -234,10 +372,76 @@ public class SurvivorBrain : NetworkBehaviour
         if (!reported && (to.magnitude <= 0.8f || t > 6f))
         {
             reported = true;
+            reportedAt = Time.time;
             deliveredTo.Deliver(this);
         }
+        // A while later the phone rings again: she's stuck on another roof somewhere.
+        if (reported && Time.time - reportedAt > NextCallDelay) NewCall();
     }
     bool reported;
+    float reportedAt;
+    public const float NextCallDelay = 15f;
+    /// <summary>Seconds until the next call (for the HUD), or -1 if none is pending.</summary>
+    public float NextCallIn => Stage.Value == State.Delivered && reported ? Mathf.Max(0f, NextCallDelay - (Time.time - reportedAt)) : -1f;
+
+    /// <summary>Host: put her on a different flat roof and start a fresh rescue.</summary>
+    void NewCall()
+    {
+        if (!FindRoofSpot(out Vector3 spot)) { reportedAt = Time.time; return; }
+        if (kind == Kind.ReclinerGuy && chair != null)
+        {
+            chair.SetDown(spot, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), heli ? heli.GetComponent<Rigidbody>() : null);
+            reported = false; deliveredTo = null; RescueStartedAt = -1f; RoughMoments = 0;
+            Enter(State.Waiting);
+            Say(Pick(L.waiting), 3f);
+            return;
+        }
+        var rb = GetComponent<Rigidbody>();
+        body.StandUp(spot, null);
+        rb.position = transform.position;
+        rb.linearVelocity = Vector3.zero;
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt) nt.Teleport(transform.position, transform.rotation, transform.localScale); // jump, don't slide, on everyone's screen
+        home = spot;
+        reported = false; deliveredTo = null;
+        RescueStartedAt = -1f; RoughMoments = 0;
+        Enter(State.Waiting);
+        Say(Pick(L.waiting), 3f);
+    }
+
+    /// <summary>A clear spot on a flat roof 50-150 m from where she is, 6-26 m up, away from the hospital.</summary>
+    bool FindRoofSpot(out Vector3 spot)
+    {
+        spot = default;
+        var roofs = new System.Collections.Generic.List<Collider>();
+        foreach (var c in FindObjectsByType<BoxCollider>(FindObjectsSortMode.None))
+        {
+            if (c.isTrigger || c.attachedRigidbody != null) continue;
+            var b = c.bounds;
+            if (b.max.y < 6f || b.max.y > 26f || b.size.x < 9f || b.size.z < 9f) continue;
+            float d = Vector2.Distance(new Vector2(b.center.x, b.center.z), new Vector2(transform.position.x, transform.position.z));
+            if (d < 50f || d > 150f) continue;
+            bool nearDropOff = false;
+            foreach (var z in RescueZone.All) if (Vector3.Distance(z.transform.position, b.center) < 30f) nearDropOff = true;
+            if (nearDropOff) continue;
+            roofs.Add(c);
+        }
+        for (int attempt = 0; attempt < 150 && roofs.Count > 0; attempt++)
+        {
+            var b = roofs[Random.Range(0, roofs.Count)].bounds;
+            Vector3 p = new Vector3(Random.Range(b.min.x + 2.5f, b.max.x - 2.5f), b.max.y + 3f, Random.Range(b.min.z + 2.5f, b.max.z - 2.5f));
+            if (!Physics.Raycast(p, Vector3.down, out RaycastHit hit, 4f, GameLayers.Gameplay, QueryTriggerInteraction.Ignore)) continue;
+            if (Mathf.Abs(hit.point.y - b.max.y) > 0.05f || hit.normal.y < 0.95f) continue;       // the roof itself, not a prop
+            Vector3 feet = hit.point + Vector3.up * 0.05f;
+            // room to stand and for the hook to come down: nothing solid within 2.2 m, clear sky above
+            // (a box from just above the roof surface up to head height, so the roof itself doesn't count)
+            bool blocked = Physics.CheckBox(feet + Vector3.up * 1.1f, new Vector3(2.2f, 0.95f, 2.2f), Quaternion.identity, GameLayers.Gameplay & ~(1 << gameObject.layer), QueryTriggerInteraction.Ignore);
+            if (blocked || Physics.Raycast(feet + Vector3.up * 2f, Vector3.up, 30f, GameLayers.Gameplay, QueryTriggerInteraction.Ignore)) continue;
+            spot = feet;
+            return true;
+        }
+        return false;
+    }
 
     // ------------------------------------------------------------------ helpers
 
@@ -291,7 +495,7 @@ public class SurvivorBrain : NetworkBehaviour
     static readonly System.Collections.Generic.HashSet<Transform> TakenSeats = new();
     Transform FreeSeat()
     {
-        for (int k = 0; k < 3; k++)
+        for (int k = 2; k >= 0; k--)  // right side first: Recliner Guy's chair takes the left of the cabin
         {
             var s = FindDeep(heli.transform, "M_BenchSeat_" + k);
             if (s != null && TakenSeats.Add(s)) return s;
