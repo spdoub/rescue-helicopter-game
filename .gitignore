@@ -28,3 +28,6 @@ RescueGame/*.pdb
 RescueGame/*.apk
 RescueGame/*.unitypackage
 RescueGame/crashlytics-build.properties
+
+# Blender auto-backups
+*.blend1
