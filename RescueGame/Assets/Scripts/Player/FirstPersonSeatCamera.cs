@@ -5,8 +5,12 @@ using UnityEngine.InputSystem;
 /// First-person camera.
 /// In a session: sits at your crew member's eyes, or in the cockpit when you're the seated pilot
 /// (NetworkPlayer owns the look direction). Offline: rides in the pilot seat so you can just fly.
-/// Esc frees the mouse (for the menu); click to grab it again. V toggles a debug chase view.
+/// Esc frees the mouse (for the menu); click to grab it again.
+/// V cycles views: first person -> front view (camera in front of you, looking back at your
+/// character, for checking animations) -> outside view of the helicopter -> first person.
+/// Runs after CrewVisual so it follows the animated head for this frame.
 /// </summary>
+[DefaultExecutionOrder(100)]
 public class FirstPersonSeatCamera : MonoBehaviour
 {
     public Transform helicopter;
@@ -20,12 +24,18 @@ public class FirstPersonSeatCamera : MonoBehaviour
     public float maxYaw = 150f;
     public float maxPitch = 80f;
 
-    [Header("Debug chase view (V)")]
+    [Header("Front view (V)")]
+    public float frontDistance = 2.4f;
+    public float frontHeight = 0.35f;
+
+    [Header("Helicopter chase view (V)")]
     public float chaseDistance = 20f;
     public float chaseHeight = 7f;
 
+    public enum View { FirstPerson, Front, HeliChase }
+    public static View ForcedView = (View)(-1); // test screenshots only
+    View view = View.FirstPerson;
     float yaw, pitch;
-    bool chaseView;
     NetworkHelicopter netHeli;
     Camera cam;
 
@@ -51,7 +61,9 @@ public class FirstPersonSeatCamera : MonoBehaviour
         if (kb != null && kb.escapeKey.wasPressedThisFrame) SetCursorLocked(false);
         if (mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked && !MouseOverMenu(mouse))
             SetCursorLocked(true);
-        if (kb != null && kb.vKey.wasPressedThisFrame) chaseView = !chaseView;
+        if (kb != null && kb.vKey.wasPressedThisFrame) view = (View)(((int)view + 1) % 3);
+        if ((int)ForcedView >= 0) view = ForcedView;
+        CrewVisual.ShowOwnHead = view != View.FirstPerson;
 
         if (mouse != null && Cursor.lockState == CursorLockMode.Locked && NetworkPlayer.Local == null)
         {
@@ -65,7 +77,19 @@ public class FirstPersonSeatCamera : MonoBehaviour
     {
         if (!helicopter) return;
 
-        if (chaseView)
+        var me = NetworkPlayer.Local;
+
+        if (view == View.Front && me != null)
+        {
+            // Stand in front of your character and look back at it (turns as you turn).
+            Vector3 body = me.Visual != null && me.Visual.Ragdolled ? me.Visual.HeadPosition : me.transform.position;
+            Vector3 facing = Quaternion.Euler(0f, me.LookYaw, 0f) * Vector3.forward;
+            transform.position = body + facing * frontDistance + Vector3.up * frontHeight;
+            transform.LookAt(body + Vector3.up * 0.1f);
+            return;
+        }
+
+        if (view == View.HeliChase)
         {
             Vector3 flatForward = Vector3.ProjectOnPlane(helicopter.forward, Vector3.up).normalized;
             transform.position = helicopter.position - flatForward * chaseDistance + Vector3.up * chaseHeight;
@@ -73,7 +97,6 @@ public class FirstPersonSeatCamera : MonoBehaviour
             return;
         }
 
-        var me = NetworkPlayer.Local;
         if (me != null)
         {
             if (me.SeatedAsPilot.Value)
@@ -86,9 +109,10 @@ public class FirstPersonSeatCamera : MonoBehaviour
             {
                 // On your feet: eyes at head height, horizon kept level.
                 // Knocked flat: ride along with the floppy ragdoll's head.
-                var visual = me.Visual; // the model detaches from the body while ragdolled
-                Vector3 eyePos = me.GetComponent<CrewBody>().Eye;
-                if (visual != null && visual.Ragdolled) eyePos = visual.HeadPosition;
+                // Eyes ride on the animated head (so the body stays lined up underneath you);
+                // the model detaches from the body while ragdolled.
+                var visual = me.Visual;
+                Vector3 eyePos = visual != null ? visual.EyePosition : me.GetComponent<CrewBody>().Eye;
                 transform.position = Vector3.Lerp(transform.position, eyePos, visual != null && visual.Ragdolled ? 0.35f : 1f);
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }

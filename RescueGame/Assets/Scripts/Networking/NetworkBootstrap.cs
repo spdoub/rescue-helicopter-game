@@ -17,6 +17,7 @@ using UnityEngine;
 ///   -takepilot          sit in the pilot seat as soon as connected (dev builds only)
 ///   -testboard          your crew member walks to the helicopter and jumps aboard (dev test)
 ///   -testgrab           your crew member looks down and holds on to the floor (dev test)
+///   -shot <file> [-shotpitch deg] [-shotview front|fp]   save a screenshot after 5 s and quit (dev test)
 ///   -netlog             print helicopter + crew positions once a second (for comparing machines)
 ///
 /// Uses Unity Transport (direct IP) for now. Steam is added later as a second transport.
@@ -56,10 +57,39 @@ public class NetworkBootstrap : MonoBehaviour
                 case "-client" when i + 1 < args.Length && !args[i + 1].StartsWith("-"): joinAddress = args[i + 1]; break;
             }
         }
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "-shot") StartCoroutine(TestScreenshot(args[i + 1],
+                ArgFloat(args, "-shotpitch", 0f), ArgValue(args, "-shotview") == "front"));
+        }
+
         localAddress = FindLocalAddress();
 
         if (args.Contains("-client")) StartClient();
         else StartHost(); // default: host straight away, even with nobody else around
+    }
+
+    static string ArgValue(string[] args, string key)
+    {
+        int i = Array.IndexOf(args, key);
+        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+    }
+
+    static float ArgFloat(string[] args, string key, float fallback) =>
+        float.TryParse(ArgValue(args, key), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : fallback;
+
+    IEnumerator TestScreenshot(string file, float pitch, bool front)
+    {
+        FirstPersonSeatCamera.ForcedView = front ? FirstPersonSeatCamera.View.Front : FirstPersonSeatCamera.View.FirstPerson;
+        float end = Time.time + 5f;
+        while (Time.time < end)
+        {
+            if (NetworkPlayer.Local != null) NetworkPlayer.Local.SetLookForTests(pitch);
+            yield return null;
+        }
+        ScreenCapture.CaptureScreenshot(file);
+        yield return new WaitForSeconds(1f);
+        Application.Quit();
     }
 
     static string FindLocalAddress()

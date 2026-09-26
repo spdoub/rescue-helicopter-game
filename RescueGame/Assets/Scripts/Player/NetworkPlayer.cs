@@ -104,6 +104,9 @@ public class NetworkPlayer : NetworkBehaviour
         return heli.transform.TransformPoint(new Vector3(-3f, 0f, 1f)) + Vector3.up * 0.3f;
     }
 
+    /// <summary>Test screenshots: point the camera.</summary>
+    public void SetLookForTests(float pitch) => LookPitch = pitch;
+
     [Rpc(SendTo.Owner)]
     void FaceRpc(float yaw)
     {

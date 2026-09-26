@@ -23,6 +23,11 @@ public class CrewVisual : MonoBehaviour
     public float armDamping = 5f;
     public float headWobble = 1.5f;
 
+    [Header("First-person eyes (from the head bone)")]
+    public float eyeUp = 0.1f;
+    public float eyeForward = 0.2f;
+
+
     [Header("Ragdoll")]
     public float tetherStrength = 60f;
     public float tetherDamping = 8f;
@@ -32,6 +37,12 @@ public class CrewVisual : MonoBehaviour
     public Vector3 collectiveGrip = new(0.12f, 1.35f, 1.95f);
 
     public Vector3 HeadPosition => head ? head.position : transform.position + Vector3.up * 1.35f;
+
+    /// <summary>Where your eyes are this frame: just in front of the animated head.</summary>
+    public Vector3 EyePosition { get; private set; }
+
+    /// <summary>Show your own head too (set by the camera for the front/outside views).</summary>
+    public static bool ShowOwnHead;
     public bool Ragdolled { get; private set; }
 
     Animator anim;
@@ -135,11 +146,17 @@ public class CrewVisual : MonoBehaviour
             target = Eye + Vector3.down * 0.2f + right * (0.2f * side) + look * 0.65f;
             weight = 1f;
         }
-        else { anim.SetIKPositionWeight(goal, 0f); anim.SetIKRotationWeight(goal, 0f); return; }
+        else
+        {
+            // Not using this hand: let the animation carry it (arms hang out of view).
+            anim.SetIKPositionWeight(goal, 0f);
+            anim.SetIKRotationWeight(goal, 0f);
+            return;
+        }
 
         anim.SetIKPositionWeight(goal, weight);
         anim.SetIKPosition(goal, target);
-        anim.SetIKRotationWeight(goal, 0.6f);
+        anim.SetIKRotationWeight(goal, weight * 0.6f);
         anim.SetIKRotation(goal, Quaternion.LookRotation(look, Vector3.up));
     }
 
@@ -183,8 +200,17 @@ public class CrewVisual : MonoBehaviour
             if (neck) neck.rotation = Quaternion.AngleAxis(swing.magnitude * 40f * headWobble, Vector3.Cross(Vector3.up, swing).normalized + Vector3.forward * 1e-4f) * neck.rotation;
         }
 
+        // Eyes: a little up and forward from the head bone (which sits at the base of the skull),
+        // so what's left of the hidden head is behind the camera, not in front of it.
+        if (head)
+        {
+            Vector3 fwd = Vector3.ProjectOnPlane(Ragdolled ? head.forward : root.forward, Vector3.up).normalized;
+            EyePosition = head.position + Vector3.up * eyeUp + fwd * eyeForward;
+        }
+        else if (body) EyePosition = body.Eye;
+
         // First person: hide your own head (and helmet) so it doesn't block your camera.
-        if (head) head.localScale = isLocal ? Vector3.one * 0.001f : Vector3.one;
+        if (head) head.localScale = isLocal && !ShowOwnHead ? Vector3.one * 0.001f : Vector3.one;
     }
 
     void FlopArm(Transform upperArm, bool busy, Vector3 offset)
