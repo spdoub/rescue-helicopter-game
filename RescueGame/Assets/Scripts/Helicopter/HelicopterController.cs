@@ -17,8 +17,10 @@ public class HelicopterController : MonoBehaviour
     public float maxClimbSpeed = 8f;
     [Tooltip("Top descent speed at full 'down' input, in m/s.")]
     public float maxDescentSpeed = 6f;
-    [Tooltip("How quickly it reaches the target climb/descent speed. Also acts as altitude hold when you let go.")]
+    [Tooltip("How quickly it reaches the target climb/descent speed.")]
     public float verticalResponse = 2f;
+    [Tooltip("Let go of up/down: how firmly it holds that height (per metre off).")]
+    public float altitudeHoldStrength = 1.2f;
 
     [Header("Tilt (forward/back/sideways)")]
     [Tooltip("How far the helicopter leans at full input, in degrees. More lean = faster.")]
@@ -58,6 +60,7 @@ public class HelicopterController : MonoBehaviour
 
     Rigidbody rb;
     float collective, pitchInput, rollInput, yawInput;
+    bool holding; float holdAltitude;
 
     void Awake()
     {
@@ -92,7 +95,8 @@ public class HelicopterController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!engineOn || !simulate) return;
+        if (!simulate) { IsLanded = CheckLanded(); return; } // (keep this true on every machine, not just the host)
+        if (!engineOn) return;
 
         // Sitting on the ground with nobody pulling up: engine idles and the full weight rests
         // on the skids (otherwise the hover assist makes it weightless and it slides around).
@@ -123,6 +127,14 @@ public class HelicopterController : MonoBehaviour
 
         // Steer vertical speed toward a target (0 when you let go = altitude hold).
         float targetClimb = collective >= 0f ? collective * maxClimbSpeed : collective * maxDescentSpeed;
+        // Altitude hold: let go of up/down and it stays at that height, even with people or a
+        // survivor dragging on it (the lift below only cancels the helicopter's own weight).
+        if (Mathf.Abs(collective) < 0.05f)
+        {
+            if (!holding) { holding = true; holdAltitude = rb.position.y; }
+            targetClimb = Mathf.Clamp((holdAltitude - rb.position.y) * altitudeHoldStrength, -2f, 2f);
+        }
+        else holding = false;
         // Losing power: can't climb, and the best it can do is a slow sinking glide.
         if (power < 1f) targetClimb = Mathf.Min(targetClimb * power, -3.5f * (1f - power));
         float verticalAccel = -Physics.gravity.y + (targetClimb - rb.linearVelocity.y) * verticalResponse;

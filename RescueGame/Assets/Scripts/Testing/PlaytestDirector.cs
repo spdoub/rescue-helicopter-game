@@ -222,6 +222,15 @@ public class PlaytestDirector : MonoBehaviour
         }
     }
 
+    /// <summary>Do something once (a key press, a measurement).</summary>
+    class Lambda : Step
+    {
+        readonly string label; readonly Action<PlaytestDirector> act;
+        public Lambda(string label, Action<PlaytestDirector> act) { this.label = label; this.act = act; }
+        public override string Name => label;
+        public override bool Tick(PlaytestDirector d, float e) { act(d); return true; }
+    }
+
     class Jump : Step
     {
         public override bool Tick(PlaytestDirector d, float e) { NetworkPlayer.BotJumps = 1; return true; }
@@ -367,6 +376,30 @@ public class PlaytestDirector : MonoBehaviour
             case "rescue_recliner": // same, for Recliner Guy (pilot bot "rescue-recliner")
                 RescueRounds(SurvivorBrain.Kind.ReclinerGuy, 1, door, cabin);
                 break;
+
+            case "solo_hover": // one player: take off, climb, get out of the seat - the helicopter should hover on its own
+            {
+                Vector3 leftAt = default;
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("to the pilot seat", d => d.Heli.pilotSeat.position, 0.6f, 8f));
+                Add(new Lambda("sit down (E)", d => d.Me.BotToggleSeat()));
+                Add(new Until("seated", d => d.Me.SeatedAsPilot.Value, 3f));
+                Add(new Lambda("pilot: climb", d => NetworkHelicopter.BotPilot = t => new HelicopterInput { collective = t < 3.5f ? 1f : 0f }));
+                Add(new Act("climbing", 7f));
+                Add(new Lambda("get up (E)", d => { d.Me.BotToggleSeat(); leftAt = d.Heli.transform.position; }));
+                Add(new Until("out of the seat", d => !d.Me.SeatedAsPilot.Value, 3f));
+                Add(new Act("hovering with nobody flying", 20f));
+                Add(new Lambda("measure drift", d =>
+                {
+                    Vector3 now = d.Heli.transform.position;
+                    float drift = new Vector2(now.x - leftAt.x, now.z - leftAt.z).magnitude, sink = leftAt.y - now.y;
+                    Debug.Log($"[Playtest] solo hover: drift {drift:F1} m, height change {-sink:F1} m in 20 s");
+                    if (drift > 6f || sink > 3f) d.Report("unpiloted-drift", $"drifted {drift:F1} m, sank {sink:F1} m in 20 s");
+                }));
+                break;
+            }
 
             case "passenger": // stand in the cabin (holding on half the time) while someone flies hard
                 Add(new GoTo("walk to door", door, 0.6f));

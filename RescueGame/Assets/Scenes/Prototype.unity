@@ -18627,6 +18627,7 @@ MonoBehaviour:
   maxClimbSpeed: 8
   maxDescentSpeed: 6
   verticalResponse: 2
+  altitudeHoldStrength: 1.2
   maxTiltAngle: 25
   tiltStrength: 40
   tiltDamping: 12

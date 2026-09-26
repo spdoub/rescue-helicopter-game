@@ -92,6 +92,8 @@ public static class WinchBuilder
             dust.SetColor("_BaseColor", new Color(0.85f, 0.72f, 0.56f, 0.35f));
             AssetDatabase.CreateAsset(dust, dir + "M_Dust.mat");
         }
+        dust.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Effects/SoftPuff.png")); // soft round puffs, not squares
+        EditorUtility.SetDirty(dust);
         lights.beamMaterial = beam; lights.dustMaterial = dust;
         EditorUtility.SetDirty(lights);
         Debug.Log("[Audio] helicopter sounds wired: " + (a.rotorLoop && a.winchMotor && a.doorSlide && a.hookClank && a.deliveredJingle));

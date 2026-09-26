@@ -23,10 +23,13 @@ public class HeliLights : NetworkBehaviour
     Transform beam;
     ParticleSystem dust;
     NetworkHelicopter heli;
+    NetworkHelicopter heliNet => heli;
+    HelicopterController controller;
 
     void Awake()
     {
         heli = GetComponent<NetworkHelicopter>();
+        controller = GetComponent<HelicopterController>();
         var lamp = new GameObject("Searchlight").transform;
         lamp.SetParent(transform, false);
         lamp.localPosition = lampPosition;
@@ -70,7 +73,9 @@ public class HeliLights : NetworkBehaviour
             dust.transform.position = hit.point + Vector3.up * 0.1f;
         }
         var em = dust.emission;
-        em.rateOverTime = height < 14f ? Mathf.Lerp(80f, 0f, height / 14f) : 0f;
+        // (parked on the ground with the rotor idling: just a light stir)
+        bool parked = controller != null && controller.IsLanded && heliNet.ControlsSync.Value.x <= 0.05f;
+        em.rateOverTime = height < 14f ? Mathf.Lerp(80f, 0f, height / 14f) * (parked ? 0.15f : 1f) : 0f;
     }
 
     [Rpc(SendTo.Server)]

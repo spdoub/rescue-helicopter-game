@@ -121,7 +121,12 @@ public class Recliner : NetworkBehaviour
                     if (c && bc && c.bounds.Intersects(bc.bounds) &&
                         Physics.ComputePenetration(c, c.transform.position, c.transform.rotation, bc, bc.transform.position, bc.transform.rotation, out _, out _))
                         overlapping = true;
-            if (!overlapping) { Ignore(b.GetComponents<Collider>(), false); ghosted.RemoveAt(i); }
+            if (!overlapping) { Ignore(b.GetComponents<Collider>(), false); ghosted.RemoveAt(i); continue; }
+            // still standing in it: nudge them out sideways (gently, not a physics shove)
+            var brb = b.GetComponent<Rigidbody>();
+            Vector3 away = b.transform.position - transform.position; away.y = 0f;
+            if (away.sqrMagnitude < 0.0001f) away = transform.right;
+            if (brb && !brb.isKinematic) brb.AddForce(away.normalized * 25f, ForceMode.Acceleration);
         }
         if (ghosted.Count == 0) restoring = false;
     }

@@ -185,8 +185,8 @@ public static class SurvivorBuilder
         model.name = "Model";
         foreach (var r in model.GetComponentsInChildren<Renderer>()) r.sharedMaterial = mat;
         void Box(Vector3 c, Vector3 size) { var b = root.AddComponent<BoxCollider>(); b.center = c; b.size = size; }
-        Box(new Vector3(0f, 0.26f, 0.02f), new Vector3(1.0f, 0.5f, 0.85f));     // base + seat
-        Box(new Vector3(0f, 0.78f, -0.45f), new Vector3(1.0f, 0.62f, 0.32f));    // backrest
+        Box(new Vector3(0f, 0.26f, 0.02f), new Vector3(0.92f, 0.5f, 0.85f));     // base + seat
+        Box(new Vector3(0f, 0.78f, -0.45f), new Vector3(0.92f, 0.62f, 0.32f));    // backrest
         Box(new Vector3(0f, 0.2f, 0.52f), new Vector3(0.8f, 0.14f, 0.38f));      // footrest
         var seat = new GameObject("SeatPoint").transform; seat.SetParent(root.transform, false); seat.localPosition = new Vector3(0f, 0.1f, 0.12f);
         var lift = new GameObject("LiftPoint").transform; lift.SetParent(root.transform, false); lift.localPosition = new Vector3(0f, 1.12f, -0.5f);

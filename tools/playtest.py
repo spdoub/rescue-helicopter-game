@@ -124,6 +124,7 @@ SUITE = [
     dict(name="exitjump", scenario="exitjump", duration=45),
     dict(name="door", scenario="door", duration=35),
     dict(name="winch", scenario="winch", duration=30),
+    dict(name="solo_hover", scenario="solo_hover", duration=50),
     dict(name="rescue", scenario="rescue_crew", client_pilot="rescue", take_pilot_client=True, duration=330),
     dict(name="rescue_recliner", scenario="rescue_recliner", client_pilot="rescue-recliner", take_pilot_client=True, duration=200),
     dict(name="walk", scenario="walk", duration=36, window=True),
