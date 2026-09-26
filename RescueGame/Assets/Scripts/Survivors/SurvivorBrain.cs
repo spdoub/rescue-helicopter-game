@@ -63,7 +63,7 @@ public class SurvivorBrain : NetworkBehaviour
     public NetworkVariable<bool> Agreed = new();
     /// <summary>Where this call is: 0 rooftop, 1 beach, 2 mountain, 3 cliff top, 4 lake shore, 5 forest (for the HUD).</summary>
     public NetworkVariable<byte> Place = new();
-    public static readonly string[] PlaceNames = { "the rooftop", "the beach", "the mountain", "the cliff top", "the lake shore", "the forest" };
+    public static readonly string[] PlaceNames = { "the rooftop", "the beach", "the mountain", "the cliff top", "the lake shore", "the forest", "the stuck gondola" };
 
     /// <summary>Chance a new call is somewhere out on the island instead of a city roof. "-wild 1" forces it (dev builds); playtests default to roofs.</summary>
     public static float WildChance
@@ -642,6 +642,7 @@ public class SurvivorBrain : NetworkBehaviour
         byte place = 0; Vector3 spot = default;
         bool wild = IslandGenerator.Current != null && Random.value < WildChance && FindWildSpot(out spot, out place);
         if (!wild && !FindRoofSpot(out spot)) { reportedAt = Time.time; return; }
+        if (Place.Value == 6) GondolaTaken = false;
         Place.Value = place;
         Weather.Instance?.Roll(); // new call, new weather
         if (kind == Kind.ReclinerGuy && chair != null)
@@ -669,6 +670,8 @@ public class SurvivorBrain : NetworkBehaviour
     }
 
     int forceKind = -1;
+    /// <summary>Only one survivor on the gondola roof at a time.</summary>
+    static bool GondolaTaken;
 
     /// <summary>Host: put them down somewhere (used at spawn for dev placement).</summary>
     void MoveTo(Vector3 spot)
@@ -690,7 +693,16 @@ public class SurvivorBrain : NetworkBehaviour
         int mask = GameLayers.Gameplay & ~(1 << gameObject.layer);
         for (int attempt = 0; attempt < 120; attempt++)
         {
-            int kind = forceKind > 0 ? forceKind : 1 + Random.Range(0, 5);
+            int kind = forceKind > 0 ? forceKind : 1 + Random.Range(0, 6);
+            if (kind == 6)
+            {
+                // the roof of the cable car cabin stuck mid-span (one of the great set pieces)
+                Vector3 top = isl.GondolaCabin + Vector3.up * 1.35f;
+                if (top.y < 5f || GondolaTaken) continue;
+                if (!Physics.Raycast(top + Vector3.up * 2f, Vector3.down, out RaycastHit gh, 4f, mask, QueryTriggerInteraction.Ignore)) continue;
+                spot = gh.point + Vector3.up * 0.05f; place = 6; GondolaTaken = true;
+                return true;
+            }
             float x, z;
             switch (kind)
             {

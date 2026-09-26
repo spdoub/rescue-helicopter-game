@@ -126,6 +126,8 @@ public class NetworkBootstrap : MonoBehaviour
                 Vector3 look = target.transform.position + Vector3.up * 0.5f;
                 Vector3 fwd = Vector3.ProjectOnPlane(target.transform.forward, Vector3.up).normalized;
                 Vector3 pos = look + fwd * F(1, 7f) + Vector3.up * F(2, 1.5f) + Vector3.Cross(Vector3.up, fwd) * F(3, 2.5f);
+                // keep the camera above whatever ground is there (hillsides)
+                if (Physics.Raycast(pos + Vector3.up * 60f, Vector3.down, out RaycastHit gh, 120f, GameLayers.Gameplay, QueryTriggerInteraction.Ignore) && pos.y < gh.point.y + 1.6f) pos.y = gh.point.y + 1.6f;
                 cam.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look - pos));
                 cam.fieldOfView = 55f;
                 yield return null; yield return null;

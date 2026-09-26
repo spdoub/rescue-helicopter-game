@@ -15,12 +15,13 @@ using UnityEngine;
 public class IslandGenerator : MonoBehaviour
 {
     public int seed = 20260926;
-    [Tooltip("Grass A/B, Sand, Rock A/B, Snow, Water, Trunk, Leaves A/B/C, Wood, Stone, Roof (14 materials, in this order)")]
-    public Material[] mats = new Material[14];
+    [Tooltip("Grass A/B, Sand, Rock A/B, Snow, Water, Trunk, Leaves A/B/C, Wood, Stone, Roof, Asphalt, Paint, Cable (17 materials, in this order)")]
+    public Material[] mats = new Material[17];
     public float halfX = 800f, halfZ = 600f, cell = 10f;
     public const float SeaLevel = -1.5f;
 
-    const int GrassA = 0, GrassB = 1, Sand = 2, RockA = 3, RockB = 4, Snow = 5, Water = 6, Trunk = 7, LeafA = 8, LeafB = 9, LeafC = 10, Wood = 11, Stone = 12, RoofM = 13;
+    const int GrassA = 0, GrassB = 1, Sand = 2, RockA = 3, RockB = 4, Snow = 5, Water = 6, Trunk = 7, LeafA = 8, LeafB = 9, LeafC = 10, Wood = 11, Stone = 12, RoofM = 13, Asphalt = 14, Paint = 15, Cable = 16;
+    const int MatCount = 17;
 
     public static IslandGenerator Current { get; private set; }
     System.Random rnd;
@@ -43,6 +44,8 @@ public class IslandGenerator : MonoBehaviour
         BuildSea();
         BuildForest();
         BuildLandmarks();
+        BuildRoads();
+        BuildGondola();
         if (!Application.isPlaying)
             foreach (Transform t in GetComponentsInChildren<Transform>(true)) if (t != transform) t.gameObject.hideFlags = HideFlags.DontSave;
     }
@@ -132,7 +135,7 @@ public class IslandGenerator : MonoBehaviour
                 if (Mathf.Sqrt(x * x + z * z) < 235f) h = -0.08f;
                 grid[i, k] = new Vector3(x + jx, h, z + jz);
             }
-        var kit = new Kit(14);
+        var kit = new Kit(MatCount);
         for (int i = 0; i < nx; i++)
             for (int k = 0; k < nz; k++)
             {
@@ -184,7 +187,7 @@ public class IslandGenerator : MonoBehaviour
                 float density = Fbm(px, pz, 180f, 12.5f);                              // forest belts
                 if (density < 0.52f || rnd.NextDouble() > (density - 0.5f) * 2.4f) continue;
                 var key = (Mathf.FloorToInt(px / 160f), Mathf.FloorToInt(pz / 160f));
-                if (!chunks.TryGetValue(key, out var kit)) chunks[key] = kit = new Kit(14);
+                if (!chunks.TryGetValue(key, out var kit)) chunks[key] = kit = new Kit(MatCount);
                 Tree(kit, new Vector3(px, h - 0.3f, pz), h > 95f);
                 count++;
             }
@@ -226,7 +229,7 @@ public class IslandGenerator : MonoBehaviour
 
     void BuildLandmarks()
     {
-        var kit = new Kit(14);
+        var kit = new Kit(MatCount);
         // lighthouse on the cliff point (south-west)
         Vector3 lh = LandNear(-560f, -300f);
         kit.Cylinder(Stone, lh, 4.5f, 2f, 10);
@@ -289,6 +292,150 @@ public class IslandGenerator : MonoBehaviour
         kit.BoxRot(Stone, at + q * new Vector3(w * 0.3f, 0.8f + h + 2.2f, 0f), new Vector3(1f, 2.6f, 1f), q); // chimney
         kit.BoxRot(Water, at + q * new Vector3(0f, 0.8f + h * 0.55f, d / 2f + 0.02f), new Vector3(w * 0.4f, h * 0.4f, 0.05f), q); // window
     }
+
+    // ------------------------------------------------------------------ roads
+
+    /// <summary>A country road from the city's edge out to each landmark: a ribbon that hugs the terrain
+    /// (0.15 m above it), with a dashed centre line, a low stone wall here and there, and a lay-by at the end.</summary>
+    void BuildRoads()
+    {
+        var kit = new Kit(MatCount);
+        // routes: city edge -> waypoints (the terrain gives the height)
+        var routes = new[]
+        {
+            new[] { new Vector2(60f, -240f), new Vector2(60f, -300f), new Vector2(64f, -348f) },                                      // south: to the pier
+            new[] { new Vector2(40f, 240f), new Vector2(50f, 290f), new Vector2(60f, 320f) },                                         // north: to the lodge
+            new[] { new Vector2(240f, 60f), new Vector2(330f, 70f), new Vector2(400f, 60f) },                                         // east: to the lake cabin
+            new[] { new Vector2(-240f, -60f), new Vector2(-380f, -140f), new Vector2(-470f, -230f), new Vector2(-545f, -290f) },        // west: to the lighthouse
+        };
+        foreach (var r in routes) Road(kit, r, 6f);
+        var go = new GameObject("Roads"); go.transform.SetParent(transform, false);
+        var mesh = kit.ToMesh("Roads");
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+    }
+
+    void Road(Kit kit, Vector2[] pts, float width)
+    {
+        // resample the polyline every 6 m with a Catmull-Rom curve between the waypoints
+        var path = new List<Vector2>();
+        for (int i = 0; i < pts.Length - 1; i++)
+        {
+            Vector2 p0 = pts[Mathf.Max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Mathf.Min(i + 2, pts.Length - 1)];
+            int n = Mathf.Max(2, Mathf.CeilToInt(Vector2.Distance(p1, p2) / 6f));
+            for (int k = 0; k < n; k++)
+            {
+                float t = k / (float)n, t2 = t * t, t3 = t2 * t;
+                path.Add(0.5f * ((2f * p1) + (-p0 + p2) * t + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 + (-p0 + 3f * p1 - 3f * p2 + p3) * t3));
+            }
+        }
+        path.Add(pts[pts.Length - 1]);
+        Vector3 P(Vector2 q, float side, float lift)
+        {
+            // smoothed height across the road's width so it doesn't tilt with every terrain facet
+            float h = 0f; int c = 0;
+            for (float dx = -3f; dx <= 3f; dx += 3f) for (float dz = -3f; dz <= 3f; dz += 3f) { h += Height(q.x + dx, q.y + dz); c++; }
+            return new Vector3(q.x, Mathf.Max(h / c, SeaLevel + 0.6f) + lift, q.y);
+        }
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            Vector2 a = path[i], b = path[i + 1];
+            Vector2 dir = (b - a).normalized, side = new Vector2(-dir.y, dir.x) * (width / 2f);
+            Vector3 a0 = P(a - side, 0, 0.15f), a1 = P(a + side, 0, 0.15f), b0 = P(b - side, 0, 0.15f), b1 = P(b + side, 0, 0.15f);
+            kit.Quad(Asphalt, a0, a1, b1, b0, Vector3.up);
+            // shoulders (a thin sand/gravel edge so the asphalt doesn't float above grass facets)
+            Vector2 s2 = side * 1.5f;
+            kit.Quad(Sand, P(a - s2, 0, 0.05f), a0 + Vector3.down * 0.02f, b0 + Vector3.down * 0.02f, P(b - s2, 0, 0.05f), Vector3.up);
+            kit.Quad(Sand, a1 + Vector3.down * 0.02f, P(a + s2, 0, 0.05f), P(b + s2, 0, 0.05f), b1 + Vector3.down * 0.02f, Vector3.up);
+            if (i % 2 == 0)
+            {
+                Vector2 m = (a + b) / 2f, ds = new Vector2(-dir.y, dir.x) * 0.12f, dl = dir * 1.6f;
+                kit.Quad(Paint, P(m - dl - ds, 0, 0.17f), P(m - dl + ds, 0, 0.17f), P(m + dl + ds, 0, 0.17f), P(m + dl - ds, 0, 0.17f), Vector3.up);
+            }
+            // a low dry-stone wall along one side on some stretches
+            if ((i / 9) % 3 == 1)
+            {
+                Vector3 w0 = P(a + side * 1.35f, 0, 0f), w1 = P(b + side * 1.35f, 0, 0f);
+                kit.BoxRot(Stone, (w0 + w1) / 2f + Vector3.up * 0.45f, new Vector3(0.5f, 0.9f, Vector3.Distance(w0, w1) + 0.1f), Quaternion.LookRotation(new Vector3(dir.x, 0f, dir.y)));
+            }
+        }
+        // a signpost at the start
+        Vector3 s0 = P(path[0], 0, 0f) + new Vector3(width / 2f + 1.5f, 0f, 0f);
+        kit.Cylinder(Trunk, s0, 0.08f, 2.4f, 5);
+        kit.Box(Wood, s0 + Vector3.up * 2.1f, new Vector3(1.2f, 0.3f, 0.06f));
+    }
+
+    // ------------------------------------------------------------------ the gondola (a mountain rescue waiting to happen)
+
+    /// <summary>A cable car up the mountain: a base station by the lodge, pylons up the slope, a top station near
+    /// the snow, and one cabin hanging mid-span. The cabin is where a future rescue takes place.</summary>
+    void BuildGondola()
+    {
+        var kit = new Kit(MatCount);
+        Vector2 a = new Vector2(80f, 330f), b = new Vector2(130f, 470f);
+        Vector3 A = new Vector3(a.x, Height(a.x, a.y), a.y), B = new Vector3(b.x, Height(b.x, b.y), b.y);
+        // stations
+        foreach (var (p, name) in new[] { (A, "Base"), (B, "Top") })
+        {
+            kit.Box(Stone, p + Vector3.up * 1.5f, new Vector3(9f, 3f, 7f));
+            kit.Box(RoofM, p + Vector3.up * 3.6f, new Vector3(10f, 1.2f, 8f));
+            kit.Box(Metal_(), p + Vector3.up * 6.5f, new Vector3(0.6f, 6f, 0.6f));   // the wheel tower
+            kit.Cylinder(Stone, p + Vector3.up * 8.5f, 1.6f, 0.4f, 12);               // bull wheel
+        }
+        // pylons every ~45 m, cable hanging between them (sagging), and the cabin on the middle span
+        int n = Mathf.CeilToInt(Vector3.Distance(A, B) / 45f);
+        var tops = new List<Vector3>();
+        tops.Add(A + Vector3.up * 8.5f);
+        for (int i = 1; i < n; i++)
+        {
+            float t = i / (float)n;
+            Vector2 q = Vector2.Lerp(a, b, t);
+            Vector3 g = new Vector3(q.x, Height(q.x, q.y), q.y);
+            float hgt = 14f + Mathf.Sin(t * Mathf.PI) * 6f;
+            kit.Box(Metal_(), g + Vector3.up * hgt / 2f, new Vector3(1.2f, hgt, 1.2f));
+            kit.Box(Metal_(), g + Vector3.up * (hgt - 0.5f), new Vector3(5f, 0.5f, 0.8f));  // cross arm
+            kit.Box(Stone, g + Vector3.up * 0.6f, new Vector3(3f, 1.2f, 3f));
+            tops.Add(g + Vector3.up * hgt);
+        }
+        tops.Add(B + Vector3.up * 8.5f);
+        for (int i = 0; i < tops.Count - 1; i++)
+        {
+            Vector3 p0 = tops[i], p1 = tops[i + 1];
+            int segs = 8;
+            for (int k = 0; k < segs; k++)
+            {
+                float t0 = k / (float)segs, t1 = (k + 1) / (float)segs;
+                Vector3 c0 = Vector3.Lerp(p0, p1, t0) + Vector3.down * (Mathf.Sin(t0 * Mathf.PI) * 2.5f);
+                Vector3 c1 = Vector3.Lerp(p0, p1, t1) + Vector3.down * (Mathf.Sin(t1 * Mathf.PI) * 2.5f);
+                foreach (var sx in new[] { -1.8f, 1.8f })
+                {
+                    Vector3 off = Vector3.Cross(Vector3.up, (p1 - p0).normalized) * sx;
+                    Vector3 mid = (c0 + c1) / 2f + off;
+                    kit.BoxRot(Cable, mid, new Vector3(0.12f, 0.12f, Vector3.Distance(c0, c1)), Quaternion.LookRotation(c1 - c0));
+                }
+            }
+            if (i == (tops.Count - 1) / 2)
+            {
+                // the cabin, hanging from the cable at mid-span (a bit of a tilt: it's stuck)
+                Vector3 hang = Vector3.Lerp(p0, p1, 0.5f) + Vector3.down * 2.5f + Vector3.Cross(Vector3.up, (p1 - p0).normalized) * 1.8f;
+                var q = Quaternion.LookRotation(p1 - p0) * Quaternion.Euler(0f, 0f, 6f);
+                kit.BoxRot(Metal_(), hang + Vector3.down * 1.2f, new Vector3(0.3f, 2.4f, 0.3f), q);          // hanger arm
+                kit.BoxRot(RoofM, hang + Vector3.down * 3.6f, new Vector3(2.6f, 2.6f, 3.2f), q);              // cabin body
+                kit.BoxRot(Water, hang + Vector3.down * 3.3f, new Vector3(2.7f, 1.0f, 3.3f), q);              // window band
+                kit.BoxRot(Metal_(), hang + Vector3.down * 2.35f, new Vector3(2.8f, 0.15f, 3.4f), q);         // roof rail
+                GondolaCabin = hang + Vector3.down * 3.6f;
+            }
+        }
+        var go = new GameObject("Gondola"); go.transform.SetParent(transform, false);
+        var mesh = kit.ToMesh("Gondola");
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+    }
+    /// <summary>Where the stuck gondola cabin is (world), for a future rescue.</summary>
+    public Vector3 GondolaCabin { get; private set; }
+    static int Metal_() => Stone; // (grey stone doubles as painted steel at this scale)
 
     // ------------------------------------------------------------------ mesh kit
 

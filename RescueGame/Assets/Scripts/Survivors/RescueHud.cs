@@ -125,7 +125,7 @@ public class RescueHud : MonoBehaviour
                     goal = s.kind == SurvivorBrain.Kind.ReclinerGuy ? $"Pick up {s.displayName} - hook his chair's strap"
                          : s.kind == SurvivorBrain.Kind.LedgeResident ? (s.Agreed.Value ? $"Pick up {s.displayName} - bring the hook right up to his ledge"
                                                                                         : $"Talk {s.displayName} round - hover close by, nice and steady")
-                         : $"Pick up {s.displayName} from {SurvivorBrain.PlaceNames[Mathf.Min(s.Place.Value, 5)]}";
+                         : $"Pick up {s.displayName} from {SurvivorBrain.PlaceNames[Mathf.Min(s.Place.Value, 6)]}";
                     if (s.Fire.Value.start > 0.0) goal += s.Singed.Value ? "  - SINGED! Hurry!" : "  - THE ROOF IS ON FIRE!";
                     Marker(cam, s.transform.position + Vector3.up * 1.8f, s.displayName);
                     break;

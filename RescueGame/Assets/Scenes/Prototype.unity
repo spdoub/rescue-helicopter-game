@@ -6524,6 +6524,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1304368634}
   - component: {fileID: 1304368633}
+  - component: {fileID: 1304368635}
   m_Layer: 0
   m_Name: Island
   m_TagString: Untagged
@@ -6559,6 +6560,9 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 6b7a3502e692b47fb9e10965ab906ac0, type: 2}
   - {fileID: 2100000, guid: 3e9090cb41a3a48fa945ac864d38fb9c, type: 2}
   - {fileID: 2100000, guid: 6e375d239acb5479399abb36c9f92c7b, type: 2}
+  - {fileID: 2100000, guid: a712db3b4ada24d4eacd47a6e21d89f9, type: 2}
+  - {fileID: 2100000, guid: e2c9eef55cb0d4e4ebf8caafa02e9118, type: 2}
+  - {fileID: 2100000, guid: aaa8d2b9b055e4c9c9448c9835e11ed8, type: 2}
   halfX: 800
   halfZ: 600
   cell: 10
@@ -6577,6 +6581,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1304368635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304368632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c3bf8dbae7cc406f801e69ff179d106, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IslandLife
+  paintMaterial: {fileID: 2100000, guid: cf7d466be64434120a4ee776e54eb71e, type: 2}
+  smokeMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
+  beamMaterial: {fileID: 2100000, guid: a580c300df5eb4553922e1a7f38c5644, type: 2}
 --- !u!1001 &1391388006
 PrefabInstance:
   m_ObjectHideFlags: 0

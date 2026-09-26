@@ -187,8 +187,12 @@ public static class WinchBuilder
             Flat("Snow", new Color(0.95f, 0.95f, 0.97f), 0.25f), water, Flat("Trunk", new Color(0.36f, 0.26f, 0.18f)),
             Flat("LeafA", new Color(0.30f, 0.52f, 0.24f)), Flat("LeafB", new Color(0.55f, 0.58f, 0.22f)), Flat("LeafC", new Color(0.18f, 0.40f, 0.26f)),
             Flat("CabinWood", new Color(0.50f, 0.34f, 0.22f)), Flat("Stone", new Color(0.62f, 0.60f, 0.56f)), Flat("CabinRoof", new Color(0.62f, 0.18f, 0.14f)),
+            Flat("RoadAsphalt", new Color(0.27f, 0.26f, 0.27f)), Flat("RoadPaint", new Color(0.92f, 0.86f, 0.6f)), Flat("Cable", new Color(0.15f, 0.15f, 0.16f)),
         };
         EditorUtility.SetDirty(island);
+        var ilife = islandGo.GetComponent<IslandLife>(); if (!ilife) ilife = islandGo.AddComponent<IslandLife>();
+        ilife.paintMaterial = painted; ilife.smokeMaterial = smoke; ilife.beamMaterial = beam;
+        EditorUtility.SetDirty(ilife);
         var cityGen = GameObject.Find("City")?.GetComponent<CityGenerator>();
         if (cityGen) { cityGen.skyline = false; EditorUtility.SetDirty(cityGen); }
         // see the far side of the island: haze further out, cameras further
