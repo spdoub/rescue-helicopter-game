@@ -39,7 +39,7 @@ public class CrewVisual : MonoBehaviour
     [Tooltip("Legs turn toward sideways/diagonal movement by up to this much.")]
     public float maxLegTurn = 90f;
     [Tooltip("Ground speed (m/s) the run animation's feet cover at normal playback. Faster movement speeds it up so feet don't slide.")]
-    public float runAnimSpeed = 4.7f;
+    public float runAnimSpeed = 1.7f;
 
     [Header("Hands")]
     [Tooltip("How fast arms raise/lower when you start/stop reaching.")]
@@ -62,6 +62,9 @@ public class CrewVisual : MonoBehaviour
     public Vector3 collectiveGrip = new(0.12f, 1.35f, 1.95f);
 
     public Vector3 HeadPosition => head ? head.position : transform.position + Vector3.up * 1.35f;
+
+    /// <summary>Animated bone positions (for automated playtest checks).</summary>
+    public Vector3 BonePosition(HumanBodyBones b) { var t = anim ? anim.GetBoneTransform(b) : null; return t ? t.position : transform.position; }
 
     /// <summary>The animated head's position this frame (follows leaning/bobbing).</summary>
     public Vector3 HeadBonePosition => head ? head.position : transform.position + Vector3.up * 1.2f;
@@ -160,9 +163,16 @@ public class CrewVisual : MonoBehaviour
         }
         legTurn = Mathf.LerpAngle(legTurn, targetLegTurn, 1f - Mathf.Exp(-8f * dt));
 
-        anim.SetFloat(SpeedId, speed, 0.15f, dt);
+        anim.SetFloat(SpeedId, Mathf.Max(speed, shuffle * 0.8f), 0.15f, dt);
         // Playback rate: backwards plays in reverse; faster than the run animation's own pace speeds it up.
-        anim.SetFloat(DirectionId, direction * Mathf.Max(1f, speed / runAnimSpeed), 0.1f, dt);
+        // From ~2 m/s up only the run cycle plays, at exactly the rate that makes planted feet
+        // keep pace with the ground (runAnimSpeed = ground covered per second at normal rate).
+        float rate = Mathf.Lerp(1f, speed / runAnimSpeed, Mathf.InverseLerp(1f, 2f, speed));
+        // Turning on the spot: shuffle the feet a little so they don't skate round.
+        float turnRate = Mathf.Abs(Mathf.DeltaAngle(lastBodyYaw, bodyYaw)) / Mathf.Max(dt, 1e-4f);
+        lastBodyYaw = bodyYaw;
+        shuffle = Mathf.MoveTowards(shuffle, speed < 0.3f && turnRate > 60f ? 1f : 0f, dt * 6f);
+        anim.SetFloat(DirectionId, direction * Mathf.Max(rate, 0.3f), 0.1f, dt);
         anim.SetBool(GroundedId, player.Grounded.Value || player.SeatedAsPilot.Value);
         anim.SetBool(SeatedId, player.SeatedAsPilot.Value);
 
@@ -184,6 +194,7 @@ public class CrewVisual : MonoBehaviour
     }
 
     Vector3 lastAccel;
+    float lastBodyYaw, shuffle;
 
     // ---------------------------------------------------------------- where the player looks
 

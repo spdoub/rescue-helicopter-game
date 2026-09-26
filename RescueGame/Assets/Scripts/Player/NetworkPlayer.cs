@@ -58,6 +58,14 @@ public class NetworkPlayer : NetworkBehaviour
     public static bool BoardForTests;      // test switch: walk forward and keep jumping (climb aboard)
     public static bool RunForTests;        // test switch: sprint forward
 
+    // ---- Bot control (automated playtests; see PlaytestDirector) ----
+    /// <summary>When set, replaces keyboard/mouse movement for this machine's player.</summary>
+    public static PlayerInput? BotOverride;
+    /// <summary>Jump presses queued by a bot (consumed one per physics tick).</summary>
+    public static int BotJumps;
+    public void BotLook(float yaw, float pitch) { LookYaw = yaw; LookPitch = Mathf.Clamp(pitch, -85f, MaxLookDown); }
+    public void BotToggleSeat() => ToggleSeatRpc(false);
+
     void Awake()
     {
         body = GetComponent<CrewBody>();
@@ -194,6 +202,14 @@ public class NetworkPlayer : NetworkBehaviour
         if (HoldGrabForTests) { i.grabLeft = i.grabRight = true; i.pitch = 60f; }
         LocalReachLeft = i.grabLeft;
         LocalReachRight = i.grabRight;
+        if (BotOverride.HasValue)
+        {
+            var b = BotOverride.Value;
+            i.moveX = b.moveX; i.moveZ = b.moveZ; i.sprint = b.sprint;
+            i.grabLeft = b.grabLeft; i.grabRight = b.grabRight;
+            LocalReachLeft = i.grabLeft; LocalReachRight = i.grabRight;
+        }
+        if (BotJumps > 0) { BotJumps--; i.jump = true; }
         if (RunForTests) { i.moveZ = 1f; i.sprint = true; }
         if (BoardForTests && !OnHelicopter.Value) { i.moveZ = 1f; i.jump = Time.time % 1f < Time.fixedDeltaTime; }
         return i;

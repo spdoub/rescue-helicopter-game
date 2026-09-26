@@ -20,6 +20,9 @@ public class NetworkHelicopter : NetworkBehaviour
     /// <summary>Test mode: the pilot flies a scripted pattern instead of reading devices (used by automated tests).</summary>
     public static bool Autopilot;
 
+    /// <summary>Automated playtests: flight controls as a function of seconds since the pilot sat down.</summary>
+    public static System.Func<float, HelicopterInput> BotPilot;
+
     [Header("Cabin")]
     public Transform pilotSeat;       // where the pilot's feet go when seated
     public Transform pilotSeatExit;   // where they stand after getting up
@@ -84,7 +87,8 @@ public class NetworkHelicopter : NetworkBehaviour
         // Pilot: send this tick's controls to the host (the host sends to itself locally).
         if (IsLocalPilot)
         {
-            var input = Autopilot ? AutopilotInput(Time.time - pilotSince) : HelicopterInput.ReadDevices();
+            float since = Time.time - pilotSince;
+            var input = BotPilot != null ? BotPilot(since) : Autopilot ? AutopilotInput(since) : HelicopterInput.ReadDevices();
             if (IsServer) ReceiveInput(input);
             else SubmitInputRpc(input);
         }

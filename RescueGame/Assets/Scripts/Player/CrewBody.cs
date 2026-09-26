@@ -22,6 +22,10 @@ public class CrewBody : MonoBehaviour
     public float groundAccel = 12f;
     public float airAccel = 3f;
 
+    [Header("Steps")]
+    [Tooltip("Ledges up to this high are stepped onto automatically while walking.")]
+    public float stepHeight = 0.4f;
+
     [Header("Jumping")]
     public float jumpSpeed = 5.3f;
     [Tooltip("Can still jump this long after walking off an edge.")]
@@ -130,6 +134,8 @@ public class CrewBody : MonoBehaviour
         Vector3 push = Vector3.ClampMagnitude(delta * accel, 25f);
         rb.AddForce(push, ForceMode.Acceleration);
 
+        if (IsGrounded && wish.sqrMagnitude > 0.01f) StepUp(wish.normalized);
+
         // Feet push back on whatever we're standing on (equal and opposite), so walking around
         // the cabin nudges the helicopter instead of adding energy from nowhere.
         if (IsGrounded && GroundBody != null)
@@ -144,6 +150,26 @@ public class CrewBody : MonoBehaviour
             lastJumpPressTime = lastGroundedTime = -10f;
             IsGrounded = false;
         }
+    }
+
+    /// <summary>Walking into a low ledge (a kerb, the helipad lip, a step): hop the body up onto it.</summary>
+    void StepUp(Vector3 dir)
+    {
+        int mask = GameLayers.Gameplay & ~(1 << gameObject.layer);
+        float reach = capsule.radius + 0.15f;
+        Vector3 feet = Feet;
+        // Something blocking at ankle height...
+        if (!Physics.Raycast(feet + Vector3.up * 0.05f, dir, out RaycastHit low, reach, mask, QueryTriggerInteraction.Ignore)) return;
+        if (Vector3.Angle(low.normal, Vector3.up) < 50f) return; // that's a slope, not a step
+        // ...but clear above step height...
+        if (Physics.Raycast(feet + Vector3.up * (stepHeight + 0.05f), dir, reach + 0.1f, mask, QueryTriggerInteraction.Ignore)) return;
+        // ...and there's a floor on top we can stand on.
+        Vector3 over = feet + dir * (reach + 0.05f) + Vector3.up * (stepHeight + 0.05f);
+        if (!Physics.Raycast(over, Vector3.down, out RaycastHit top, stepHeight + 0.05f, mask, QueryTriggerInteraction.Ignore)) return;
+        float rise = top.point.y - feet.y;
+        if (rise < 0.02f || rise > stepHeight) return;
+        rb.position += Vector3.up * (rise + 0.02f) + dir * 0.05f;
+        Vector3 v = rb.linearVelocity; if (v.y < 0f) v.y = 0f; rb.linearVelocity = v;
     }
 
     void CheckGround(out Vector3 floorNormal)

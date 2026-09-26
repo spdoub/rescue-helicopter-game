@@ -36,9 +36,10 @@ public class FirstPersonSeatCamera : MonoBehaviour
     public float chaseDistance = 20f;
     public float chaseHeight = 7f;
 
-    public enum View { FirstPerson, Front, HeliChase }
+    public enum View { FirstPerson, Front, HeliChase, Side }
     public static View ForcedView = (View)(-1); // test screenshots only
     View view = View.FirstPerson;
+    public static View CurrentView { get; private set; }
     float yaw, pitch;
     float bobHeight;
     Vector3 headLean;
@@ -69,6 +70,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
             SetCursorLocked(true);
         if (kb != null && kb.vKey.wasPressedThisFrame) view = (View)(((int)view + 1) % 3);
         if ((int)ForcedView >= 0) view = ForcedView;
+        CurrentView = view;
         CrewVisual.ShowOwnHead = view != View.FirstPerson;
 
         if (mouse != null && Cursor.lockState == CursorLockMode.Locked && NetworkPlayer.Local == null)
@@ -98,6 +100,16 @@ public class FirstPersonSeatCamera : MonoBehaviour
                 if (hit.distance > 0f) dist = Mathf.Min(dist, hit.distance - 0.05f);
             transform.position = focus + offset.normalized * Mathf.Max(dist, 0.6f);
             transform.LookAt(focus);
+            return;
+        }
+
+        if (view == View.Side && me != null)
+        {
+            // Test recordings: watch your character from the side (good for feet and wobble).
+            Vector3 body = me.Visual != null && me.Visual.Ragdolled ? me.Visual.HeadPosition : me.transform.position;
+            Vector3 right = Quaternion.Euler(0f, me.LookYaw, 0f) * Vector3.right;
+            transform.position = body + right * 3.2f + Vector3.up * 0.2f;
+            transform.LookAt(body + Vector3.down * 0.1f);
             return;
         }
 
@@ -138,7 +150,8 @@ public class FirstPersonSeatCamera : MonoBehaviour
                     headLean = Vector3.Lerp(headLean, lean, 1f - Mathf.Exp(-14f * Time.deltaTime));
                     float bob = visual != null ? visual.EyePosition.y - steady.y : 0f;
                     bobHeight = Mathf.Lerp(bobHeight, bob, 1f - Mathf.Exp(-10f * Time.deltaTime));
-                    transform.position = steady + headLean + facing * eyeForward + Vector3.up * bobHeight;
+                    Vector3 want = steady + headLean + facing * eyeForward + Vector3.up * bobHeight;
+                    transform.position = KeepOutOfWalls(steady, want);
                 }
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }
@@ -148,6 +161,18 @@ public class FirstPersonSeatCamera : MonoBehaviour
         Vector3 eye = SittingInPilotSeat ? pilotEye : crewEye;
         transform.position = helicopter.TransformPoint(eye);
         transform.rotation = helicopter.rotation * Quaternion.Euler(pitch, yaw, 0f);
+    }
+
+    /// <summary>Pull the camera back toward your head if it would poke into a wall or the helicopter.</summary>
+    static Vector3 KeepOutOfWalls(Vector3 from, Vector3 to)
+    {
+        const float radius = 0.1f;
+        Vector3 d = to - from; float len = d.magnitude;
+        if (len < 1e-4f) return to;
+        int mask = GameLayers.Gameplay & ~(1 << GameLayers.Crew);
+        if (Physics.SphereCast(from, radius, d / len, out RaycastHit hit, len, mask, QueryTriggerInteraction.Ignore))
+            return from + d / len * Mathf.Max(0f, hit.distance - 0.01f);
+        return to;
     }
 
     static void SetCursorLocked(bool locked)

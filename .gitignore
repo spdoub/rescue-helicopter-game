@@ -34,3 +34,6 @@ RescueGame/crashlytics-build.properties
 
 # Local game builds
 Builds/
+
+# Automated playtest output
+Playtests/

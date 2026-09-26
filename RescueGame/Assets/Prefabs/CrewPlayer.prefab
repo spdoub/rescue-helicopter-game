@@ -105,6 +105,7 @@ MonoBehaviour:
   sprintSpeed: 6
   groundAccel: 7
   airAccel: 3
+  stepHeight: 0.4
   jumpSpeed: 5.3
   coyoteTime: 0.15
   jumpBuffer: 0.15
@@ -917,7 +918,7 @@ MonoBehaviour:
   leanStiffness: 40
   maxLean: 16
   maxLegTurn: 90
-  runAnimSpeed: 4.7
+  runAnimSpeed: 1.7
   reachBlendSpeed: 7
   handFollowSpeed: 12
   handWobble: 0.03
@@ -927,6 +928,7 @@ MonoBehaviour:
   tetherDamping: 8
   stickGrip: {x: 0.45, y: 1.55, z: 2.2}
   collectiveGrip: {x: 0.12, y: 1.35, z: 1.95}
+  footProbe: 0.35
 --- !u!1 &3906087533063378432
 GameObject:
   m_ObjectHideFlags: 0
