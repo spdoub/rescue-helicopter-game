@@ -124,6 +124,7 @@ public class NetworkHelicopter : NetworkBehaviour
                 applied.yaw = Mathf.Clamp(applied.yaw + Meddle.yaw, -1f, 1f);
             }
             controller.SetInput(applied);
+            controller.hoverAutopilot = PilotClientId.Value == NoPilot && Time.time >= meddleUntil;
             var c = new Vector4(applied.collective, applied.pitch, applied.roll, applied.yaw);
             if ((c - ControlsSync.Value).sqrMagnitude > 0.0004f) ControlsSync.Value = c;
         }

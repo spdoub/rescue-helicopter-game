@@ -19,7 +19,7 @@ public class RescueHud : MonoBehaviour
     void Styles()
     {
         if (bubble != null) return;
-        bubble = new GUIStyle(GUI.skin.box) { fontSize = 16, wordWrap = true, alignment = TextAnchor.MiddleCenter, padding = new RectOffset(10, 10, 6, 6) };
+        bubble = new GUIStyle(GUI.skin.box) { fontSize = 16, wordWrap = true, richText = true, alignment = TextAnchor.MiddleCenter, padding = new RectOffset(10, 10, 6, 6) };
         bubble.normal.textColor = new Color(0.12f, 0.1f, 0.08f);
         bubble.normal.background = Solid(new Color(1f, 0.97f, 0.9f, 0.92f));
         banner = new GUIStyle(bubble) { fontSize = 20 };
@@ -43,6 +43,13 @@ public class RescueHud : MonoBehaviour
     }
 
     /// <summary>Text with a thick black outline (readable over the bright sky).</summary>
+    static void Outlined(Rect r, string text, GUIStyle style, TextAnchor align)
+    {
+        var was = style.alignment; style.alignment = align;
+        Outlined(r, text, style);
+        style.alignment = was;
+    }
+
     static void Outlined(Rect r, string text, GUIStyle style)
     {
         var c = style.normal.textColor;
@@ -53,7 +60,8 @@ public class RescueHud : MonoBehaviour
         GUI.Label(r, text, style);
     }
 
-    void MissionPanel(Camera cam)
+    /// <summary>Returns how far down the screen the panel reaches.</summary>
+    float MissionPanel(Camera cam)
     {
         if (Event.current.type == EventType.Layout || Event.current.type == EventType.Repaint) placed.Clear();
         if (heli == null) { heli = FindAnyObjectByType<NetworkHelicopter>(); if (heli) { fuel = heli.GetComponent<HeliFuel>(); damage = heli.GetComponent<HeliDamage>(); } }
@@ -78,7 +86,7 @@ public class RescueHud : MonoBehaviour
             float from = (Mathf.Atan2(-w.x, -w.z) * Mathf.Rad2Deg + 360f) % 360f;   // where it's blowing FROM
             string kind = weather.Current.Value switch { Weather.Kind.Calm => "calm", Weather.Kind.Breezy => "breezy", _ => "GUSTY" };
             objective.normal.textColor = weather.Current.Value == Weather.Kind.Gusty ? new Color(1f, 0.8f, 0.5f) : Color.white;
-            Outlined(new Rect(26, y, 620, 30), $"WIND: {knots:0} kn from {compass[Mathf.RoundToInt(from / 45f) % 8]} ({kind})", objective);
+            Outlined(new Rect(26, y, 900, 30), $"WIND: {knots:0} kn from {compass[Mathf.RoundToInt(from / 45f) % 8]} ({kind})", objective);
             objective.normal.textColor = Color.white;
             y += 30f;
         }
@@ -96,7 +104,7 @@ public class RescueHud : MonoBehaviour
             string them = s.kind == SurvivorBrain.Kind.StrongGrandma || s.kind == SurvivorBrain.Kind.DogPerson ? "her" : "him";
             if (s.Current == SurvivorBrain.State.Meddling)
             {
-                Outlined(new Rect(26, y, 620, 30), $"- {s.displayName} is grabbing the controls!  Grab him (click) and pull him back!", objective);
+                Outlined(new Rect(26, y, 900, 30), $"- {s.displayName} is grabbing the controls!  Grab him (click) and pull him back!", objective);
                 y += 28f; anyoneAboard = true;
                 continue;
             }
@@ -108,7 +116,11 @@ public class RescueHud : MonoBehaviour
                     Marker(cam, s.dog.transform.position + Vector3.up * 1f, s.dog.dogName);
                     break;
                 case SurvivorBrain.State.Waiting:
-                    goal = s.kind == SurvivorBrain.Kind.ReclinerGuy ? $"Pick up {s.displayName} - hook his chair's strap" : $"Pick up {s.displayName} from the rooftop";
+                    goal = s.kind == SurvivorBrain.Kind.ReclinerGuy ? $"Pick up {s.displayName} - hook his chair's strap"
+                         : s.kind == SurvivorBrain.Kind.LedgeResident ? (s.Agreed.Value ? $"Pick up {s.displayName} - bring the hook right up to his ledge"
+                                                                                        : $"Talk {s.displayName} round - hover close by, nice and steady")
+                         : $"Pick up {s.displayName} from the rooftop";
+                    if (s.Fire.Value.start > 0.0) goal += s.Singed.Value ? "  - SINGED! Hurry!" : "  - THE ROOF IS ON FIRE!";
                     Marker(cam, s.transform.position + Vector3.up * 1.8f, s.displayName);
                     break;
                 case SurvivorBrain.State.Hooked: goal = $"Winch {them} up!  (hold R at the winch box)"; break;
@@ -119,14 +131,29 @@ public class RescueHud : MonoBehaviour
                     goal = next >= 0f ? $"{s.displayName} delivered!  Next call in {Mathf.CeilToInt(next)}..." : $"{s.displayName} delivered!";
                     break;
             }
-            Outlined(new Rect(26, y, 620, 30), "- " + goal, objective);
+            Outlined(new Rect(26, y, 900, 30), "- " + goal, objective);
             y += 28f;
         }
         if (anyoneAboard && RescueZone.All.Count > 0) Marker(cam, RescueZone.All[0].transform.position + Vector3.up * 4f, "HOSPITAL");
+        return y + 4f;
+    }
+
+    readonly System.Collections.Generic.List<(Vector3 world, string label)> pending = new();
+
+    /// <summary>Queue a floating marker (drawn after the panel so it can keep clear of the text).</summary>
+    void Marker(Camera cam, Vector3 world, string label) => pending.Add((world, label));
+
+    void DrawMarkers(Camera cam, float panelBottom)
+    {
+        // The mission text (top left) and the money (top right) are no-go areas for markers.
+        placed.Add(new Rect(0f, 0f, 660f, panelBottom));
+        placed.Add(new Rect(Screen.width - 340f, 0f, 340f, 80f));
+        foreach (var (world, label) in pending) DrawMarker(cam, world, label);
+        pending.Clear();
     }
 
     /// <summary>A floating marker with distance; clamped to the screen edge with an arrow when off screen.</summary>
-    void Marker(Camera cam, Vector3 world, string label)
+    void DrawMarker(Camera cam, Vector3 world, string label)
     {
         if (cam == null) return;
         Vector3 sp = cam.WorldToScreenPoint(world);
@@ -139,8 +166,8 @@ public class RescueHud : MonoBehaviour
         if (behind) yy = Screen.height - m;
         string icon = off ? (x <= m ? "◀" : x >= Screen.width - m ? "▶" : yy <= m ? "▲" : "▼") : "▼";
         // Several markers bunched up at the same edge: stack them instead of printing on top of each other.
-        var box = new Rect(x - 100, yy - 44, 200, 46);
-        for (int tries = 0; tries < 8 && placed.Exists(r => r.Overlaps(box)); tries++)
+        var box = new Rect(Mathf.Clamp(x - 100, 4f, Screen.width - 204f), Mathf.Clamp(yy - 44, 4f, Screen.height - 50f), 200, 46);
+        for (int tries = 0; tries < 12 && placed.Exists(r => r.Overlaps(box)); tries++)
             box.y += yy > Screen.height * 0.5f ? -46f : 46f;
         placed.Add(box);
         Outlined(new Rect(box.x, box.y, 200, 24), $"{label}  {dist:0} m", marker);
@@ -152,7 +179,7 @@ public class RescueHud : MonoBehaviour
     {
         Styles();
         var cam = Camera.main;
-        MissionPanel(cam);
+        DrawMarkers(cam, MissionPanel(cam));
 
         // Name tags over the other crew members (in their suit colour).
         if (cam != null)
@@ -181,10 +208,9 @@ public class RescueHud : MonoBehaviour
             if (sp.z < 0.3f || dist > 60f) continue;
             string text = $"<b>{s.displayName}:</b> {line}";
             var size = bubble.CalcSize(new GUIContent(text));
-            float w = Mathf.Min(size.x, 320f), h = bubble.CalcHeight(new GUIContent(text), w);
+            float w = Mathf.Min(size.x + 6f, 340f), h = bubble.CalcHeight(new GUIContent(text), w) + 6f; // (slack: bold text measures a bit narrow)
             var r = new Rect(sp.x - w / 2f, Screen.height - sp.y - h - 10f, w, h);
             r.x = Mathf.Clamp(r.x, 4f, Screen.width - w - 4f); r.y = Mathf.Clamp(r.y, 4f, Screen.height - h - 4f);
-            bubble.richText = true;
             GUI.Box(r, text, bubble);
         }
 
@@ -205,5 +231,33 @@ public class RescueHud : MonoBehaviour
             float w = Mathf.Min(760f, Screen.width - 40f);
             GUI.Box(new Rect((Screen.width - w) / 2f, 70f, w, 56f), "DELIVERED!  " + report, banner);
         }
+        UpgradePrompt(cam, cash);
     }
+
+    /// <summary>Looking at a card on the upgrade board: what it is and how to buy it. Plus the till receipt.</summary>
+    void UpgradePrompt(Camera cam, int cash)
+    {
+        var up = HeliUpgrades.Instance;
+        if (up == null || !up.IsSpawned) return;
+        int card = UpgradeBoard.Instance ? UpgradeBoard.Instance.Aimed(cam) : -1;
+        if (card >= 0)
+        {
+            var info = HeliUpgrades.Catalogue[card];
+            int lv = up.Level((HeliUpgrades.Kind)card), max = info.prices.Length;
+            string line = lv >= max ? $"{info.name}: fully fitted" :
+                cash >= info.prices[lv] ? $"{info.name} {(lv > 0 ? "II" : "")}  -  ${info.prices[lv]:N0}  -  press F to buy" :
+                $"{info.name}  -  ${info.prices[lv]:N0}  (need ${info.prices[lv] - cash:N0} more: go rescue someone)";
+            float w = Mathf.Min(760f, Screen.width - 40f);
+            Outlined(new Rect((Screen.width - w) / 2f, Screen.height * 0.62f, w, 30f), line, objective, TextAnchor.MiddleCenter);
+            Outlined(new Rect((Screen.width - w) / 2f, Screen.height * 0.62f + 28f, w, 30f), info.blurb, marker, TextAnchor.MiddleCenter);
+        }
+        string msg = up.LastPurchase.Value.ToString();
+        if (msg.Length > 0 && Time.time - lastPurchaseSeen < 4f)
+        {
+            float w = Mathf.Min(620f, Screen.width - 40f);
+            GUI.Box(new Rect((Screen.width - w) / 2f, 130f, w, 44f), msg, banner);
+        }
+        if (up.LastPurchaseTime.Value != lastPurchaseStamp) { lastPurchaseStamp = up.LastPurchaseTime.Value; lastPurchaseSeen = Time.time; }
+    }
+    float lastPurchaseStamp = -100f, lastPurchaseSeen = -100f;
 }

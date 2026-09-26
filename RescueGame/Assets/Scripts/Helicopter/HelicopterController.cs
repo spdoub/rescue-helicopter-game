@@ -31,6 +31,9 @@ public class HelicopterController : MonoBehaviour
     public float horizontalDrag = 0.18f;
     [Tooltip("Extra braking when you let go of the tilt controls, so it settles into a hover. 0 = realistic drifting.")]
     public float hoverAssistDrag = 0.5f;
+    [Tooltip("Nobody in the pilot seat: the hover autopilot also holds its spot against the wind (so a solo player can go winch).")]
+    public bool hoverAutopilot;
+    public float autopilotHoldStrength = 0.6f;
 
     [Header("Turning")]
     [Tooltip("Turn rate at full input, in degrees per second.")]
@@ -180,5 +183,18 @@ public class HelicopterController : MonoBehaviour
         if (Mathf.Approximately(pitchInput, 0f) && Mathf.Approximately(rollInput, 0f))
             drag += hoverAssistDrag;
         rb.AddForce(new Vector3(-v.x, 0f, -v.z) * drag, ForceMode.Acceleration);
+
+        // Hover autopilot: lean back toward where it was left (a gentle spring, capped, so
+        // someone dangling on the cable or a big gust can still move it a bit).
+        if (hoverAutopilot && !IsLanded)
+        {
+            if (!holdingSpot) { holdingSpot = true; holdSpot = rb.position; }
+            Vector3 off = holdSpot - rb.position; off.y = 0f;
+            if (off.magnitude > 15f) holdSpot = rb.position + off.normalized * 15f; // dragged far away: hold the new spot instead
+            Vector3 pull = Vector3.ClampMagnitude(off * autopilotHoldStrength - new Vector3(v.x, 0f, v.z) * 0.8f, 3f);
+            rb.AddForce(pull, ForceMode.Acceleration);
+        }
+        else holdingSpot = false;
     }
+    bool holdingSpot; Vector3 holdSpot;
 }

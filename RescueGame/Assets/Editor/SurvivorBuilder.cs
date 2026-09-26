@@ -101,6 +101,27 @@ public static class SurvivorBuilder
         Debug.Log("[Survivor] saved Assets/Prefabs/Dog.prefab");
     }
 
+    static readonly Spec LedgeResident = new()
+    {
+        id = "LedgeResident", displayName = "Ledge Resident", kind = SurvivorBrain.Kind.LedgeResident,
+        model = "Assets/Art/Characters/LedgeResident/LedgeResident.fbx", texture = "Assets/Art/Characters/LedgeResident/LedgeResident_BaseColor.png",
+        voiceDir = "Assets/Audio/Survivors/ledge", outPath = "Assets/Prefabs/Survivor_LedgeResident.prefab",
+        height = 1.65f, eye = 1.46f, walk = 1.6f, sprint = 2.2f, jump = 3f, grip = 20000f, hardLanding = 11f, mass = 78f, payBonus = 350,
+    };
+
+    [MenuItem("Tools/Rescue Heli/Build Survivor Ledge Resident")]
+    public static void BuildLedgeResident()
+    {
+        Build(LedgeResident);
+        // Into the level (his ledge is picked when the game starts, once the city exists)
+        var old = GameObject.Find("LedgeResident");
+        if (old) Object.DestroyImmediate(old);
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(LedgeResident.outPath));
+        go.name = "LedgeResident";
+        go.transform.position = new Vector3(60f, 40f, -80f); // parked in the sky until the host puts him on a ledge
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(go.scene);
+    }
+
     [MenuItem("Tools/Rescue Heli/Build Survivor Backseat Pilot")]
     public static void BuildBackseat() => Build(BackseatPilot);
 

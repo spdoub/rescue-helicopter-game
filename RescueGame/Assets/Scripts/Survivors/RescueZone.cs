@@ -41,14 +41,14 @@ public class RescueZone : NetworkBehaviour
     {
         float minutes = s.RescueStartedAt >= 0f ? (Time.time - s.RescueStartedAt) / 60f : 5f;
         int speedBonus = Mathf.Max(0, Mathf.RoundToInt(600f - minutes * 150f));
-        int roughPenalty = s.RoughMoments * 150;
+        int roughPenalty = s.RoughMoments * 150 + (s.Singed.Value ? 300 : 0);
         int pay = Mathf.Max(100, basePay + speedBonus - roughPenalty);
-        int stars = Mathf.Clamp(5 - s.RoughMoments - (minutes > 4f ? 1 : 0), 1, 5);
+        int stars = Mathf.Clamp(5 - s.RoughMoments - (minutes > 4f ? 1 : 0) - (s.Singed.Value ? 1 : 0), 1, 5);
         string review = s.Review(stars);
         pay += s.payBonus;
         Rescued.Value++;
         Money.Value += pay;
-        string text = $"{s.displayName}: \"{review}\"  {new string('*', stars)}  +${pay:N0}";
+        string text = $"{s.displayName}{(s.Singed.Value ? " (singed)" : "")}: \"{review}\"  {new string('*', stars)}  +${pay:N0}";
         LastReport.Value = new FixedString128Bytes(text.Length > 120 ? text[..120] : text);
         ReportTime.Value = Time.time;
         s.Say(review, 5f);

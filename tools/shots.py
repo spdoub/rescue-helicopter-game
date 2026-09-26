@@ -15,6 +15,16 @@ OUT = ROOT / "Screenshots"
 SHOTS = {
     # name: extra args
     "grandma_roof": ["-shotat", "17.5,10.6,62.0,-60,14,55", "-shotdelay", "7"],
+    "grandma_fire": ["-shotat", "17.5,10.6,62.0,-60,14,55", "-fire", "1", "-shotdelay", "40"],
+    "fire_from_above": ["-shotat", "-8,30,40,41,32,60", "-fire", "1", "-shotdelay", "45"],
+    "upgrade_board": ["-shotat", "-4.5,1.7,1.2,-70,4,60", "-money", "3450", "-upgrades", "1,0,0,2", "-shotdelay", "7"],
+    "heli_upgraded": ["-shotat", "7.5,3.2,-6.5,-40,10,55", "-upgrades", "2,2,2,2", "-shotdelay", "7"],
+    "heli_upgraded_side": ["-shotat", "9,2.2,0.5,-90,4,60", "-upgrades", "2,2,2,2", "-shotdelay", "7"],
+    "heli_upgraded_tail": ["-shotat", "5,3.2,-8,-60,12,60", "-upgrades", "2,2,2,2", "-shotdelay", "7"],
+    "heli_stock": ["-shotat", "7.5,3.2,-6.5,-40,10,55", "-shotdelay", "7"],
+    "recliner_fire": ["-shotat", "-56.5,8.8,26.0,-60,15,55", "-fire", "1", "-shotdelay", "40"],
+    "ledge_resident": ["-shotnear", "LedgeResident,7,1.2,2.5", "-shotdelay", "7"],
+    "ledge_wide": ["-shotnear", "LedgeResident,22,6,6", "-shotdelay", "7"],
     "recliner_roof": ["-shotat", "-56.5,8.8,26.0,-60,15,55", "-shotdelay", "7"],
     "dogperson_roof": ["-shotat", "-66.5,23.4,3.0,-118,18,55", "-shotdelay", "8"],
     "backseat_roof": ["-shotat", "60.5,26.5,3.2,120,15,55", "-shotdelay", "7"],

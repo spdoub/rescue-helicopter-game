@@ -18,7 +18,7 @@ public class RescuePilot
     float seatedAt = -1f;
 
     Phase phase;
-    float holdY; Vector3 holdXZ;
+    float holdY; Vector3 holdXZ, windTrim;
     float phaseSince;
     Vector3 lastPos; float lastTime = -1f; Vector3 vel;
     NetworkHelicopter heli;
@@ -56,19 +56,52 @@ public class RescuePilot
                 // Put the hoist tip (helicopter-local 1.4, _, 0.85) straight above the survivor.
                 // (Recliner Guy: over his chair's lifting strap)
                 Vector3 over = survivor.chair != null ? survivor.chair.liftPoint.position : survivor.transform.position;
-                Vector3 target = over - h.rotation * new Vector3(1.4f, 0f, 0.85f);
+                // Ledge Resident: side-on to his wall, winch side in, rotor over the roof; hook just off the ledge's edge.
+                float heading = 0f;
+                Quaternion rot = h.rotation;
+                bool ledge = survivor.kind == SurvivorBrain.Kind.LedgeResident;
+                if (ledge)
+                {
+                    var ls = survivor.LedgeSpot.Value;
+                    over = new Vector3(ls.x, ls.y + 1f, ls.z) + Quaternion.Euler(0f, ls.w, 0f) * Vector3.forward * 0.6f;
+                    heading = ls.w + 90f;
+                    rot = Quaternion.Euler(0f, heading, 0f);
+                }
+                Vector3 target = over - rot * new Vector3(1.4f, 0f, 0.85f);
                 // Hover height is fixed once over the pickup (following her up while she's
                 // winched up would just climb forever).
                 if (phase == Phase.ToPickup) holdY = survivor.transform.position.y + 9f;
                 target.y = holdY;
                 // Cruise above the rooftops, only coming down once nearly there.
                 if (phase == Phase.ToPickup && Flat(target - h.position).magnitude > 25f) target.y = Mathf.Max(holdY, CruiseAltitude);
+                // The chair can't walk to the hook: in wind the hook hangs off to one side, so
+                // creep the hover over until the hook itself is above the strap (as a pilot would).
+                if (phase == Phase.Hold && (survivor.chair != null || ledge) && survivor.Current == SurvivorBrain.State.Waiting)
+                {
+                    var w = heli.GetComponent<NetworkWinch>();
+                    if (w && w.hook && w.Length.Value > 2f)
+                    {
+                        Vector3 miss = Flat(over - w.hook.position);
+                        if (miss.magnitude > 0.4f) holdXZ += Vector3.ClampMagnitude(miss, 1f) * 0.5f * Time.deltaTime;
+                    }
+                }
                 if (phase == Phase.Hold) { target.x = holdXZ.x; target.z = holdXZ.z; }
-                if (phase == Phase.ToPickup && Flat(target - h.position).magnitude < 1.2f && vel.magnitude < 1f) { Next(Phase.Hold); holdXZ = target; }
+                if (phase == Phase.ToPickup && Flat(target - h.position).magnitude < (ledge ? 2.5f : 1.2f) && vel.magnitude < (ledge ? 1.5f : 1f)
+                    && (!ledge || Mathf.Abs(Mathf.DeltaAngle(h.eulerAngles.y, heading)) < 15f)) { Next(Phase.Hold); holdXZ = target; }
+                // Ledge: hold the spot where the helicopter should be even in wind (lean into it: an integral term)
+                if (phase == Phase.Hold && ledge)
+                {
+                    Vector3 lag = Flat(target - h.position);
+                    windTrim = Vector3.ClampMagnitude(windTrim + lag * 0.4f * Time.deltaTime, 4f);
+                    target += windTrim;
+                }
                 bool aboard = survivor.Current == SurvivorBrain.State.Seated || survivor.Current == SurvivorBrain.State.Meddling;
                 if (aboard && seatedAt < 0f) seatedAt = Time.time;
                 if (aboard && since > 1f && Time.time - seatedAt >= lingerAfterBoarding) Next(Phase.ToHospital);
-                return FlyTo(h, target, phase == Phase.Hold ? 2f : 7f, 0f);
+                // (turn to the ledge heading only once close: arrive nose-first, then swing side-on)
+                // (ledge: only once nearly stopped close by, and slowly: crew are standing at an open door)
+                bool turnIn = ledge && (phase == Phase.Hold || (Flat(target - h.position).magnitude < 10f && Flat(vel).magnitude < 3f));
+                return FlyTo(h, target, phase == Phase.Hold ? 2f : 7f, turnIn ? heading : (ledge ? h.eulerAngles.y : 0f), ledge ? 0.3f : 1f);
             }
 
             case Phase.ToHospital:
@@ -119,7 +152,7 @@ public class RescuePilot
     HelicopterInput Hover(Vector3 at, float heading) => FlyTo(heli.transform, at, 2f, heading);
 
     /// <summary>Tilt toward the target (speed limited, braking as it arrives), climb/descend to its height, hold a heading.</summary>
-    HelicopterInput FlyTo(Transform h, Vector3 target, float maxSpeed, float heading)
+    HelicopterInput FlyTo(Transform h, Vector3 target, float maxSpeed, float heading, float maxYaw = 1f)
     {
         Vector3 err = Flat(target - h.position);
         Vector3 wantVel = err.normalized * Mathf.Min(maxSpeed, err.magnitude * 0.7f);
@@ -130,7 +163,7 @@ public class RescuePilot
             pitch = Mathf.Clamp(Vector3.Dot(dv, fwd) * 0.25f, -0.5f, 0.5f),
             roll = Mathf.Clamp(Vector3.Dot(dv, right) * 0.25f, -0.5f, 0.5f),
             collective = Mathf.Clamp((target.y - h.position.y) * 0.35f - vel.y * 0.1f, -0.45f, 1f), // gentle descents (crew aboard)
-            yaw = Mathf.Clamp(Mathf.DeltaAngle(h.eulerAngles.y, heading) / 30f, -1f, 1f),
+            yaw = Mathf.Clamp(Mathf.DeltaAngle(h.eulerAngles.y, heading) / 30f, -maxYaw, maxYaw),
         };
     }
 

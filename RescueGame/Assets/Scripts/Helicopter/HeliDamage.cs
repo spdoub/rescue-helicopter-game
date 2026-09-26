@@ -22,6 +22,8 @@ public class HeliDamage : NetworkBehaviour
     public float rotorStrikeDamage = 0.35f;
     public float rotorRadius = 5.2f;
     public float repairSeconds = 25f;
+    [Tooltip("Multiplier on all damage taken (armour upgrades lower it).")]
+    public float damageScale = 1f;
     public AudioClip crash, rotorStrike, alarm;
     public Material smokeMaterial;
 
@@ -105,7 +107,7 @@ public class HeliDamage : NetworkBehaviour
         if (Mathf.Abs(health - Health.Value) > 0.005f || (health != Health.Value && (health == 0f || health == 1f))) Health.Value = health;
     }
 
-    void Hurt(float amount) => health = Mathf.Max(0f, health - amount);
+    void Hurt(float amount) => health = Mathf.Max(0f, health - amount * damageScale);
 
     void TowHome()
     {

@@ -171,7 +171,7 @@ public class NetworkPlayer : NetworkBehaviour
         {
             if (kb.spaceKey.wasPressedThisFrame && !SeatedAsPilot.Value) jumpQueued = true;
             if (kb.eKey.wasPressedThisFrame) ToggleSeatRpc(false);
-            if (kb.fKey.wasPressedThisFrame) TryToggleNearestDoor();
+            if (kb.fKey.wasPressedThisFrame) Use();
         }
         if (ForceSeatForTests && IsSpawned && heli != null && heli.IsSpawned)
         {
@@ -331,6 +331,22 @@ public class NetworkPlayer : NetworkBehaviour
                 if (Vector3.Distance(body.Eye, d.HandlePoint) < DoorReach) return true;
             return false;
         }
+    }
+
+    /// <summary>F is "use": buy the upgrade card you're looking at, otherwise the nearest door.</summary>
+    public void Use()
+    {
+        int card = UpgradeBoard.Instance ? UpgradeBoard.Instance.Aimed(Camera.main) : -1;
+        if (card >= 0) BuyUpgradeRpc((byte)card); else TryToggleNearestDoor();
+    }
+
+    [Rpc(SendTo.Server)]
+    void BuyUpgradeRpc(byte card)
+    {
+        var board = UpgradeBoard.Instance;
+        if (board == null || HeliUpgrades.Instance == null || card > 3) return;
+        if (Vector3.Distance(body.Eye, board.transform.position + Vector3.up * 1.45f) > board.reach + 2f) return;
+        HeliUpgrades.Instance.TryBuy((HeliUpgrades.Kind)card, OwnerClientId);
     }
 
     [Rpc(SendTo.Server)]

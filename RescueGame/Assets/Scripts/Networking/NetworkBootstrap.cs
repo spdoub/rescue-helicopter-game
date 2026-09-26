@@ -111,6 +111,26 @@ public class NetworkBootstrap : MonoBehaviour
             if (v.Length > 5) cam.fieldOfView = v[5];
             yield return null; yield return null;
         }
+        // -shotnear Name[,dist,height,side] : frame whatever that object is (e.g. a survivor wherever the host put them),
+        // from in front of the way it faces
+        string near = ArgValue(System.Environment.GetCommandLineArgs(), "-shotnear");
+        if (near != null && Camera.main != null)
+        {
+            var parts = near.Split(',');
+            var target = GameObject.Find(parts[0]);
+            float F(int i, float d) => parts.Length > i ? float.Parse(parts[i], System.Globalization.CultureInfo.InvariantCulture) : d;
+            if (target != null)
+            {
+                var cam = Camera.main;
+                var rig = cam.GetComponent<FirstPersonSeatCamera>(); if (rig) rig.enabled = false;
+                Vector3 look = target.transform.position + Vector3.up * 0.5f;
+                Vector3 fwd = Vector3.ProjectOnPlane(target.transform.forward, Vector3.up).normalized;
+                Vector3 pos = look + fwd * F(1, 7f) + Vector3.up * F(2, 1.5f) + Vector3.Cross(Vector3.up, fwd) * F(3, 2.5f);
+                cam.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look - pos));
+                cam.fieldOfView = 55f;
+                yield return null; yield return null;
+            }
+        }
         ScreenCapture.CaptureScreenshot(file);
         yield return new WaitForSeconds(1f);
         Application.Quit();
@@ -222,7 +242,7 @@ public class NetworkBootstrap : MonoBehaviour
         if (heli != null && heli.IsSpawned)
             GUILayout.Label(heli.IsLocalPilot ? "PILOT - E to get up" : "Walk to the cockpit, E to fly");
         GUILayout.Label("WASD walk, Shift run, Space jump, click to grab");
-        GUILayout.Label(NetworkPlayer.Local != null && NetworkPlayer.Local.NearDoor ? "F: open / close door" : "F near a door: open / close it");
+        GUILayout.Label(NetworkPlayer.Local != null && NetworkPlayer.Local.NearDoor ? "F: open / close door" : "F: open / close a door, or buy the upgrade card you're looking at");
         if (NetworkPlayer.Local != null && NetworkPlayer.Local.NearWinch) GUILayout.Label("WINCH: hold R reel in, Q let out");
         GUILayout.Label("Esc frees the mouse, click to look again.  H hides this");
         GUILayout.EndArea();

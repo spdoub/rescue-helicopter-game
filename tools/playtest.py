@@ -39,13 +39,14 @@ def launch(out, args, window, log):
 
 
 def run(name, scenario=None, pilot=None, client_scenario=None, client_pilot=None, duration=30,
-        record=False, view="side", fps=15, seed=1, take_pilot_client=False, window=False):
+        record=False, view="side", fps=15, seed=1, take_pilot_client=False, window=False, fire=None):
     kill_games()
     stamp = datetime.now().strftime("%m%d-%H%M%S")
     base = os.path.join(OUT, f"{stamp}_{name}")
     host_args = ["-duration", str(duration), "-seed", str(seed)]
     if scenario: host_args += ["-scenario", scenario]
     if pilot: host_args += ["-pilotbot", pilot]
+    if fire is not None: host_args += ["-fire", str(fire)]
     if record: host_args += ["-record", "-recfps", str(fps), "-recview", view]
     # A window is needed for recording and for animation measurements (headless mode doesn't animate).
     procs = [launch(os.path.join(base, "host"), host_args, True, "host.log")]
@@ -123,6 +124,7 @@ def summarize(base):
 SUITE = [
     dict(name="exitjump", scenario="exitjump", duration=45),
     dict(name="door", scenario="door", duration=35),
+    dict(name="upgrade", scenario="upgrade", duration=40),
     dict(name="winch", scenario="winch", duration=30),
     dict(name="solo_hover", scenario="solo_hover", duration=50),
     dict(name="crash", scenario="crash", duration=50),
@@ -130,6 +132,8 @@ SUITE = [
     dict(name="backseat_meddle", scenario="backseat_meddle", client_pilot="rescue-backseat-linger", take_pilot_client=True, duration=150),
     dict(name="rescue_dogperson", scenario="rescue_dogperson", client_pilot="rescue-dogperson", take_pilot_client=True, duration=260),
     dict(name="rescue_backseat", scenario="rescue_backseat", client_pilot="rescue-backseat", take_pilot_client=True, duration=220),
+    dict(name="rescue_fire", scenario="rescue_crew", client_pilot="rescue", take_pilot_client=True, duration=200, fire=1),
+    dict(name="rescue_ledge", scenario="rescue_ledge", client_pilot="rescue-ledge", take_pilot_client=True, duration=220),
     dict(name="rescue_recliner", scenario="rescue_recliner", client_pilot="rescue-recliner", take_pilot_client=True, duration=200),
     dict(name="walk", scenario="walk", duration=36, window=True),
     dict(name="board_and_fly", scenario="board", pilot="tour", duration=40),
@@ -155,12 +159,13 @@ def main():
     r.add_argument("--view", default="side")
     r.add_argument("--fps", type=int, default=15)
     r.add_argument("--seed", type=int, default=1)
+    r.add_argument("--fire", type=float, help="chance of a roof fire per call (host)")
     sub.add_parser("suite")
     a = ap.parse_args()
 
     if a.cmd == "run":
         base = run(a.scenario + ("_rec" if a.record else "_win" if a.window else ""), a.scenario, a.pilot, a.client_scenario,
-                   a.client_pilot, a.duration, a.record, a.view, a.fps, a.seed, a.client_takes_pilot, a.window)
+                   a.client_pilot, a.duration, a.record, a.view, a.fps, a.seed, a.client_takes_pilot, a.window, a.fire)
         print(base)
         print(summarize(base))
     else:

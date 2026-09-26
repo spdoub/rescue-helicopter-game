@@ -26,6 +26,7 @@ SURVIVORS = {
             "Lovely boys. Five stars. Would get winched again.", "Very nice. Bit bumpy. Four stars.",
             "I've had worse. I've had better. Three stars.", "My hip will never forgive you. Two stars.",
             "One star. I'm telling the newspaper.",
+            "Is something burning? It's not my scones!", "Hot! Hot! Hurry up, sonny!", "I'm too old to be barbecued!", "OW! My cardigan's on fire!",
         ],
     },
     "recliner": {
@@ -39,6 +40,7 @@ SURVIVORS = {
             "Whoa whoa whoa!", "Yeah, this'll do. Wake me when we land.", "Right here's fine. Don't touch the chair.", "Aw, come on!",
             "Five stars. Didn't spill a drop.", "Four stars. Chair's got a new squeak.", "Three stars. Missed the second half.",
             "Two stars. My remote fell out.", "One star. I'm suing. From this chair.",
+            "Uh, is the roof supposed to be on fire?", "This chair is VERY flammable!", "Can't move! Reclined! Hurry!", "AAH! The footrest!",
         ],
     },
     "backseat": {
@@ -55,6 +57,7 @@ SURVIVORS = {
             "Five stars. I taught you well.", "Four stars. Almost as good as me.", "Three stars. Needed more of my input.",
             "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less.",
             "Hup! Textbook!", "Right. I'll be supervising.", "Adequate landing. Adequate.", "That was the winch's fault!",
+            "Fire! Classic. You took too long.", "I'd have been here before the fire started!", "Downwind of the smoke, genius!", "My eyebrows! I'm billing you!",
         ],
     },
     "dogperson": {
@@ -68,6 +71,22 @@ SURVIVORS = {
             "Two stars. Biscuit bit someone. I don't blame him.", "One star. Biscuit will remember this.",
             "Coming, Biscuit!", "Biscuit! Oh, you brave boy!", "Come on Biscuit, walkies!", "Whoops! I'm okay!",
             "Biscuit! BISCUIT! Come here, boy!", "I'm not leaving without Biscuit!", "He likes things that hold still!", "Biscuit, no! Not the edge!",
+            "Fire! Biscuit, stay away from the fire!", "Hurry! Biscuit hates fire!", "Stop, drop and roll, Biscuit!", "Ow ow ow! Hot hot hot!",
+        ],
+    },
+    "ledge": {
+        "voice": "2EiwWnXFnvU5JabPnv8n",  # "Clyde" - gravelly, grumpy older man
+        "lines": [
+            "I didn't call you!", "This is a private ledge!", "Go away, you're scaring the pigeons!",
+            "Get that thing away from me!", "No! Shoo! Shoo!", "I live here, you know!",
+            "Fine. FINE. But I'm not enjoying this.",
+            "Mind the pigeons!", "I was perfectly happy up there!", "This is kidnapping!",
+            "Eleven years on that ledge. Eleven!", "The pigeons will be wondering where I am.", "Nobody asked for this.", "My ledge had a better view.",
+            "Oh, marvellous.", "Typical!", "I'm writing to the council!",
+            "Five stars. Don't tell anyone I said that.", "Four stars. Still didn't ask for it.", "Three stars. The pigeons will be worried.",
+            "Two stars. I want my ledge back.", "One star. I'm climbing back up tonight.",
+            "Hmph!", "Don't talk to me.", "Right. How do I get back up there?", "Ow! See? This is why I stay put!",
+            "Oh, that's just perfect!", "The ledge was fine until you lot showed up!", "My robe! My good robe!",
         ],
     },
 }

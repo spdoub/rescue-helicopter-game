@@ -389,8 +389,43 @@ public class PlaytestDirector : MonoBehaviour
                 break;
             }
 
+            case "upgrade": // walk to the upgrade board with $5,000, buy the winch motor, then the stabiliser twice (second one: can't afford)
+            {
+                Transform B() => UpgradeBoard.Instance.transform;
+                int Cash() => RescueZone.All[0].Money.Value;
+                HeliUpgrades U() => HeliUpgrades.Instance;
+                Vector3 CardAt(int i) => B().TransformPoint(new Vector3(i % 2 == 0 ? -0.64f : 0.64f, i < 2 ? 1.77f : 1.14f, -0.045f));
+                void LookAtCard(PlaytestDirector d, int i)
+                {
+                    Vector3 to = CardAt(i) - d.Me.GetComponent<CrewBody>().Eye, flat = new Vector3(to.x, 0f, to.z);
+                    d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
+                }
+                Add(new Until("board and upgrades exist", d => UpgradeBoard.Instance != null && U() != null && U().IsSpawned && RescueZone.All.Count > 0, 5f));
+                Add(new Lambda("company gets $5,000", d => RescueZone.All[0].Money.Value = 5000));
+                Add(new GoTo("walk to the board", d => B().position - B().forward * 1.7f, 0.4f, 20f));
+                Add(new Lambda("look at WINCH MOTOR", d => LookAtCard(d, 0)));
+                Add(new Act("settle", 0.6f));
+                Add(new Until("aiming at the winch card", d => UpgradeBoard.Instance.Aimed(Camera.main) == 0, 2f));
+                Add(new Lambda("press F", d => d.Me.Use()));
+                Add(new Until("winch motor fitted, $1,200 paid", d => U().WinchLevel.Value == 1 && Cash() == 3800, 3f));
+                Add(new Lambda("look at STABILISER", d => LookAtCard(d, 3)));
+                Add(new Act("settle", 0.6f));
+                Add(new Lambda("press F", d => d.Me.Use()));
+                Add(new Until("stabiliser fitted, $1,400 paid", d => U().StabiliserLevel.Value == 1 && Cash() == 2400, 3f));
+                Add(new Lambda("press F again", d => d.Me.Use()));
+                Add(new Act("wait", 1.5f));
+                Add(new Until("can't afford level II: nothing changes", d => U().StabiliserLevel.Value == 1 && Cash() == 2400 && U().LastPurchase.Value.ToString().StartsWith("Can't afford"), 2f));
+                Add(new Face(180f));
+                Add(new Act("look at the helicopter", 2f));
+                break;
+            }
+
             case "rescue_crew": // winch operator for a full rescue (someone else flies with the "rescue" pilot bot)
                 RescueRounds(SurvivorBrain.Kind.StrongGrandma, 2, door, cabin);
+                break;
+
+            case "rescue_ledge": // Ledge Resident: hover by his ledge until he stops refusing, then winch him (pilot bot "rescue-ledge")
+                RescueRounds(SurvivorBrain.Kind.LedgeResident, 1, door, cabin);
                 break;
 
             case "rescue_recliner": // same, for Recliner Guy (pilot bot "rescue-recliner")
@@ -544,9 +579,12 @@ public class PlaytestDirector : MonoBehaviour
 
     /// <summary>Winch operator: board, hold the winch box, then for each call: wait until over the
     /// survivor, lower the hook to them, wait for them to be hooked, reel in, wait for delivery.</summary>
+    SurvivorBrain.Kind trackKind = SurvivorBrain.Kind.StrongGrandma;
+
     void RescueRounds(SurvivorBrain.Kind kind, int rounds, Func<PlaytestDirector, Vector3> door, Func<PlaytestDirector, Vector3> cabin)
     {
         void Add(Step s) => steps.Enqueue(s);
+        trackKind = kind; // telemetry follows the survivor being rescued
         NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
         SurvivorBrain G() => SurvivorBrain.Find(kind);
         float LowerTo(SurvivorBrain g) => g.chair != null ? g.chair.liftPoint.position.y + 0.4f : g.transform.position.y + 0.6f;
@@ -605,6 +643,7 @@ public class PlaytestDirector : MonoBehaviour
         "rescue-recliner" => new RescuePilot(SurvivorBrain.Kind.ReclinerGuy).Tick,
         "rescue-backseat" => new RescuePilot(SurvivorBrain.Kind.BackseatPilot).Tick,
         "rescue-dogperson" => new RescuePilot(SurvivorBrain.Kind.DogPerson).Tick,
+        "rescue-ledge" => new RescuePilot(SurvivorBrain.Kind.LedgeResident).Tick,
         "rescue-backseat-linger" => new RescuePilot(SurvivorBrain.Kind.BackseatPilot, 75f).Tick,
         _ => t => default,
     };
@@ -751,7 +790,7 @@ public class PlaytestDirector : MonoBehaviour
               .Append(',').Append(C(hk.x)).Append(',').Append(C(hk.y)).Append(',').Append(C(hk.z));
         }
         else sb.Append(",,,,,");
-        var sv = SurvivorBrain.Find(SurvivorBrain.Kind.StrongGrandma) ?? FindAnyObjectByType<SurvivorBrain>();
+        var sv = SurvivorBrain.Find(trackKind) ?? FindAnyObjectByType<SurvivorBrain>();
         if (sv != null && sv.IsSpawned)
         {
             var sp = sv.transform.position;

@@ -109,6 +109,61 @@ public static class WinchBuilder
         weather.streakMaterial = smoke;
         EditorUtility.SetDirty(weather);
         EditorUtility.SetDirty(lights);
+
+        // a plain white Stylized Lit material, tinted per part (upgrades, the upgrade board, ledges)
+        var painted = AssetDatabase.LoadAssetAtPath<Material>(dir + "M_Painted.mat");
+        if (painted == null)
+        {
+            painted = new Material(Shader.Find("RescueGame/Stylized Lit"));
+            painted.SetColor("_BaseColor", Color.white); // tinted per part
+            AssetDatabase.CreateAsset(painted, dir + "M_Painted.mat");
+        }
+        // roof fires: flame tongues (additive) + the same smoke, on every survivor
+        var flame = AssetDatabase.LoadAssetAtPath<Material>(dir + "M_Fire.mat");
+        if (flame == null) { flame = new Material(dust); AssetDatabase.CreateAsset(flame, dir + "M_Fire.mat"); }
+        flame.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Effects/SoftPuff.png")); // soft blobs, stretched upward by speed
+        flame.SetColor("_BaseColor", Color.white);
+        flame.SetFloat("_Blend", 2f); // additive
+        flame.SetOverrideTag("RenderType", "Transparent");
+        flame.SetInt("_ZWrite", 0);
+        flame.renderQueue = 3001;
+        flame.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        flame.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        EditorUtility.SetDirty(flame);
+        string[] folders = { "grandma", "recliner", "backseat", "dogperson", "ledge" }; // by SurvivorBrain.Kind
+        foreach (var s in Object.FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.None))
+        {
+            if (s.kind == SurvivorBrain.Kind.LedgeResident)
+            {
+                var lp = s.GetComponent<LedgePerch>() ?? s.gameObject.AddComponent<LedgePerch>();
+                lp.material = painted;
+                EditorUtility.SetDirty(lp);
+            }
+            var rf = s.GetComponent<RoofFire>() ?? s.gameObject.AddComponent<RoofFire>();
+            rf.flameMaterial = flame; rf.smokeMaterial = smoke;
+            EditorUtility.SetDirty(rf);
+            // any newly voiced lines (tools/survivor_lines.py) that the voice list doesn't have yet
+            var voice = s.GetComponent<SurvivorVoice>();
+            if (voice == null) continue;
+            string folder = "Assets/Audio/Survivors/" + folders[(int)s.kind];
+            foreach (var guid in AssetDatabase.FindAssets("t:AudioClip", new[] { folder }))
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
+                if (!voice.lines.Exists(l => l.key == clip.name)) voice.lines.Add(new SurvivorVoice.Line { key = clip.name, clip = clip });
+            }
+            EditorUtility.SetDirty(voice);
+        }
+        // upgrades: bolt-on parts on the helicopter + the board by the home pad (both built at load)
+        var ups = heli.GetComponent<HeliUpgrades>() ?? heli.AddComponent<HeliUpgrades>();
+        ups.partMaterial = painted;
+        EditorUtility.SetDirty(ups);
+        var boardGo = GameObject.Find("UpgradeBoard") ?? new GameObject("UpgradeBoard");
+        Vector3 boardPos = new Vector3(-9f, 0.1f, 4f);
+        boardGo.transform.SetPositionAndRotation(boardPos, Quaternion.LookRotation(new Vector3(boardPos.x, 0f, boardPos.z))); // front (-Z) faces the pad
+        var board = boardGo.GetComponent<UpgradeBoard>() ?? boardGo.AddComponent<UpgradeBoard>();
+        board.material = painted;
+        EditorUtility.SetDirty(board);
+
         Debug.Log("[Audio] helicopter sounds wired: " + (a.rotorLoop && a.winchMotor && a.doorSlide && a.hookClank && a.deliveredJingle));
     }
 

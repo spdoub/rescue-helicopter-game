@@ -27,7 +27,7 @@ using UnityEngine;
 public class SurvivorBrain : NetworkBehaviour
 {
     public enum State : byte { Waiting, Hooked, Boarding, Seated, Delivered, Meddling }
-    public enum Kind : byte { StrongGrandma, ReclinerGuy, BackseatPilot, DogPerson }
+    public enum Kind : byte { StrongGrandma, ReclinerGuy, BackseatPilot, DogPerson, LedgeResident }
 
     public Kind kind = Kind.StrongGrandma;
     public string displayName = "Grandma";
@@ -48,6 +48,44 @@ public class SurvivorBrain : NetworkBehaviour
     public NetworkVariable<FixedString128Bytes> Line = new();
     public NetworkVariable<State> Stage = new();
 
+    /// <summary>A fire on their roof (RoofFire draws and spreads it on every machine from this).</summary>
+    public struct FireState : INetworkSerializeByMemcpy
+    {
+        public Vector3 origin, roofMin, roofMax;
+        public double start, end; // server time; start 0 = no fire
+    }
+    public NetworkVariable<FireState> Fire = new();
+    /// <summary>Caught in the flames this trip (smokes, loses a star).</summary>
+    public NetworkVariable<bool> Singed = new();
+    /// <summary>Ledge Resident: where his ledge is (xyz = where he stands, w = which way it faces, degrees).</summary>
+    public NetworkVariable<Vector4> LedgeSpot = new();
+    /// <summary>Ledge Resident: has he been talked round into being rescued?</summary>
+    public NetworkVariable<bool> Agreed = new();
+
+    /// <summary>Chance a call comes with a roof fire. "-fire 0.5" on the command line sets it;
+    /// playtests (which pass -scenario) get none unless they ask.</summary>
+    public static float FireChance
+    {
+        get
+        {
+            if (fireChance < 0f)
+            {
+                var args = System.Environment.GetCommandLineArgs();
+                fireChance = 0.35f;
+                for (int i = 0; i < args.Length; i++)
+                {
+                    if (args[i] == "-scenario") fireChance = 0f;
+                }
+                for (int i = 0; i < args.Length - 1; i++)
+                    if (args[i] == "-fire" && float.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f)) fireChance = f;
+            }
+            return fireChance;
+        }
+    }
+    static float fireChance = -1f;
+    float fireAt = -1f, nextFireRemark;
+    RoofFire fire;
+
     public State Current => Stage.Value;
 
     CrewBody body;
@@ -67,6 +105,8 @@ public class SurvivorBrain : NetworkBehaviour
     {
         public string[] waiting, hooked, yank, seated, rough, reviews; // reviews: 5 stars .. 1 star
         public string hup, settled, arrived, fell;
+        public string[] fire; public string singed;
+        public string[] refuse; public string agree; // Ledge Resident
         // Backseat Pilot: critiques that match what the helicopter is doing, and the takeover bit
         public string[] fast, bank, low, hover, takeover, givesUp, satisfied;
     }
@@ -80,6 +120,7 @@ public class SurvivorBrain : NetworkBehaviour
         rough = new[] { "WATCH IT!", "I'll have your licence for this!", "My hip! My good hip!" },
         reviews = new[] { "Lovely boys. Five stars. Would get winched again.", "Very nice. Bit bumpy. Four stars.", "I've had worse. I've had better. Three stars.", "My hip will never forgive you. Two stars.", "One star. I'm telling the newspaper." },
         hup = "HUP!", settled = "Right. Seatbelt. Where's the tea?", arrived = "Well! That was an experience.", fell = "OOF! Again, but better.",
+        fire = new[] { "Is something burning? It's not my scones!", "Hot! Hot! Hurry up, sonny!", "I'm too old to be barbecued!" }, singed = "OW! My cardigan's on fire!",
     };
 
     static readonly Personality ReclinerLines = new()
@@ -91,6 +132,7 @@ public class SurvivorBrain : NetworkBehaviour
         rough = new[] { "MY CHAIR!", "Hey! Watch the upholstery!", "I spilled my drink!" },
         reviews = new[] { "Five stars. Didn't spill a drop.", "Four stars. Chair's got a new squeak.", "Three stars. Missed the second half.", "Two stars. My remote fell out.", "One star. I'm suing. From this chair." },
         hup = "Whoa whoa whoa!", settled = "Yeah, this'll do. Wake me when we land.", arrived = "Right here's fine. Don't touch the chair.", fell = "Aw, come on!",
+        fire = new[] { "Uh, is the roof supposed to be on fire?", "This chair is VERY flammable!", "Can't move! Reclined! Hurry!" }, singed = "AAH! The footrest!",
     };
 
     static readonly Personality BackseatLines = new()
@@ -109,6 +151,7 @@ public class SurvivorBrain : NetworkBehaviour
         satisfied = new[] { "See? That's how it's done.", "You're welcome." },
         reviews = new[] { "Five stars. I taught you well.", "Four stars. Almost as good as me.", "Three stars. Needed more of my input.", "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less." },
         hup = "Hup! Textbook!", settled = "Right. I'll be supervising.", arrived = "Adequate landing. Adequate.", fell = "That was the winch's fault!",
+        fire = new[] { "Fire! Classic. You took too long.", "I'd have been here before the fire started!", "Downwind of the smoke, genius!" }, singed = "My eyebrows! I'm billing you!",
     };
 
     static readonly Personality DogLines = new()
@@ -120,10 +163,25 @@ public class SurvivorBrain : NetworkBehaviour
         rough = new[] { "BISCUIT!", "Careful! He gets sick!", "Oh no, oh no, oh no!" },
         reviews = new[] { "Five stars! Biscuit loved it!", "Four stars. He only threw up once.", "Three stars. Biscuit is unsettled.", "Two stars. Biscuit bit someone. I don't blame him.", "One star. Biscuit will remember this." },
         hup = "Coming, Biscuit!", settled = "Biscuit! Oh, you brave boy!", arrived = "Come on Biscuit, walkies!", fell = "Whoops! I'm okay!",
+        fire = new[] { "Fire! Biscuit, stay away from the fire!", "Hurry! Biscuit hates fire!", "Stop, drop and roll, Biscuit!" }, singed = "Ow ow ow! Hot hot hot!",
     };
     static readonly string[] CallingDog = { "Biscuit! BISCUIT! Come here, boy!", "I'm not leaving without Biscuit!", "He likes things that hold still!", "Biscuit, no! Not the edge!" };
 
-    Personality L => kind switch { Kind.ReclinerGuy => ReclinerLines, Kind.BackseatPilot => BackseatLines, Kind.DogPerson => DogLines, _ => GrandmaLines };
+    static readonly Personality LedgeLines = new()
+    {
+        waiting = new[] { "I didn't call you!", "This is a private ledge!", "Go away, you're scaring the pigeons!" },
+        refuse = new[] { "Get that thing away from me!", "No! Shoo! Shoo!", "I live here, you know!" },
+        agree = "Fine. FINE. But I'm not enjoying this.",
+        hooked = new[] { "Mind the pigeons!", "I was perfectly happy up there!", "This is kidnapping!" },
+        yank = new string[0],
+        seated = new[] { "Eleven years on that ledge. Eleven!", "The pigeons will be wondering where I am.", "Nobody asked for this.", "My ledge had a better view." },
+        rough = new[] { "Oh, marvellous.", "Typical!", "I'm writing to the council!" },
+        reviews = new[] { "Five stars. Don't tell anyone I said that.", "Four stars. Still didn't ask for it.", "Three stars. The pigeons will be worried.", "Two stars. I want my ledge back.", "One star. I'm climbing back up tonight." },
+        hup = "Hmph!", settled = "Don't talk to me.", arrived = "Right. How do I get back up there?", fell = "Ow! See? This is why I stay put!",
+        fire = new[] { "Oh, that's just perfect!", "The ledge was fine until you lot showed up!" }, singed = "My robe! My good robe!",
+    };
+
+    Personality L => kind switch { Kind.ReclinerGuy => ReclinerLines, Kind.BackseatPilot => BackseatLines, Kind.DogPerson => DogLines, Kind.LedgeResident => LedgeLines, _ => GrandmaLines };
 
     /// <summary>The survivor of this kind in the scene (null if none).</summary>
     public static SurvivorBrain Find(Kind k)
@@ -139,6 +197,7 @@ public class SurvivorBrain : NetworkBehaviour
     {
         body = GetComponent<CrewBody>();
         me = GetComponent<NetworkPlayer>();
+        fire = GetComponent<RoofFire>();
     }
 
     public override void OnNetworkSpawn()
@@ -147,6 +206,8 @@ public class SurvivorBrain : NetworkBehaviour
         winch = heli ? heli.GetComponent<NetworkWinch>() : null;
         home = transform.position;
         stateSince = Time.time;
+        if (IsServer) ScheduleFire();
+        if (IsServer && kind == Kind.LedgeResident) PlaceOnLedge(); // the city is built by now: find him a ledge
     }
 
     // ------------------------------------------------------------------ host: one tick of thinking
@@ -157,6 +218,8 @@ public class SurvivorBrain : NetworkBehaviour
         if (heli == null) return input;
         if (lineUntil > 0f && Time.time > lineUntil) { Line.Value = default; lineUntil = 0f; }
         float t = Time.time - stateSince;
+        if (fireAt > 0f && Time.time > fireAt && Stage.Value == State.Waiting) { fireAt = -1f; StartFire(); }
+        if (kind != Kind.ReclinerGuy && Stage.Value == State.Waiting) CheckFellOffRoof();
 
         if (kind == Kind.ReclinerGuy) { ReclinerThink(t); return input; }
 
@@ -187,6 +250,8 @@ public class SurvivorBrain : NetworkBehaviour
             return;
         }
 
+        if (kind == Kind.LedgeResident && !Agreed.Value && Refusing(ref input)) return;
+
         if (HookAvailable(out Vector3 hookPos))
         {
             Vector3 toHook = Flat(hookPos - transform.position);
@@ -195,7 +260,7 @@ public class SurvivorBrain : NetworkBehaviour
             {
                 // Shuffle over to it, arms out, and grab on.
                 Aim(ref input, hookPos);
-                if (toHook.magnitude > 0.55f) input.moveZ = 1f;
+                if (toHook.magnitude > 0.55f && (kind != Kind.LedgeResident || OnLedge(hookPos))) input.moveZ = 1f; // (not off the end of his ledge)
                 bool inReach = Vector3.Distance(body.Chest, hookPos) < body.grabReach;
                 input.grabLeft = input.grabRight = inReach;
                 if (HoldingHook())
@@ -208,6 +273,16 @@ public class SurvivorBrain : NetworkBehaviour
                 return;
             }
         }
+
+        // Fire creeping up: back away from it, into the far corner of the roof.
+        if (fire != null && fire.BurningNear(transform.position, 4.5f))
+        {
+            Vector3 toSafe = Flat(fire.SafestSpot() - transform.position);
+            if (toSafe.magnitude > 0.8f && !body.IsKnockedDown) { input.yaw = Yaw(toSafe); input.moveZ = 1f; }
+            FireRemark();
+            return;
+        }
+        if (fire != null && fire.Active && Stage.Value == State.Waiting && Time.time > nextFireRemark + 6f) FireRemark();
 
         // Not reachable yet: wave at the helicopter when it's around.
         if (toHeli.magnitude < 70f && !body.IsKnockedDown)
@@ -227,6 +302,8 @@ public class SurvivorBrain : NetworkBehaviour
 
         if (!HoldingHook())
         {
+            // Slipped right at the door: the crew grab them and haul them in anyway.
+            if (winch.Length.Value < 2.5f && Vector3.Distance(transform.position, winch.TipPosition) < 3.5f) { Enter(State.Boarding); return; }
             // Lost her grip (or it snapped): fall, dust off, wait again.
             Enter(State.Waiting);
             Say(L.fell, 3f);
@@ -429,7 +506,8 @@ public class SurvivorBrain : NetworkBehaviour
             case State.Waiting:
             {
                 float d = Vector3.Distance(heli.transform.position, chair.transform.position);
-                if (d < 45f && Time.time > nextRemark) { Say(Pick(L.waiting), 3f); nextRemark = Time.time + 10f; }
+                if (fire != null && fire.Active) FireRemark();
+                else if (d < 45f && Time.time > nextRemark) { Say(Pick(L.waiting), 3f); nextRemark = Time.time + 10f; }
                 if (HookAvailable(out _) && Vector3.Distance(winch.hook.transform.TransformPoint(chair.hookCatch), chair.liftPoint.position) < 1.3f)
                 {
                     chair.Latch(winch.hook);
@@ -516,12 +594,23 @@ public class SurvivorBrain : NetworkBehaviour
     /// <summary>Host: put her on a different flat roof and start a fresh rescue.</summary>
     void NewCall()
     {
+        if (kind == Kind.LedgeResident)
+        {
+            if (!PlaceOnLedge()) { reportedAt = Time.time; return; }
+            Weather.Instance?.Roll();
+            reported = false; deliveredTo = null; RescueStartedAt = -1f; RoughMoments = 0;
+            ResetFire();
+            Enter(State.Waiting);
+            Say(Pick(L.waiting), 3f);
+            return;
+        }
         if (!FindRoofSpot(out Vector3 spot)) { reportedAt = Time.time; return; }
         Weather.Instance?.Roll(); // new call, new weather
         if (kind == Kind.ReclinerGuy && chair != null)
         {
             chair.SetDown(spot, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), heli ? heli.GetComponent<Rigidbody>() : null);
             reported = false; deliveredTo = null; RescueStartedAt = -1f; RoughMoments = 0;
+            ResetFire();
             Enter(State.Waiting);
             Say(Pick(L.waiting), 3f);
             return;
@@ -535,6 +624,7 @@ public class SurvivorBrain : NetworkBehaviour
         home = spot;
         reported = false; deliveredTo = null;
         RescueStartedAt = -1f; RoughMoments = 0;
+        ResetFire();
         Enter(State.Waiting);
         Say(kind == Kind.DogPerson ? Pick(CallingDog) : Pick(L.waiting), 3f);
         if (kind == Kind.DogPerson && dog != null) dog.Relocate(spot + transform.right * 1.5f + Vector3.up * 0.3f);
@@ -574,6 +664,197 @@ public class SurvivorBrain : NetworkBehaviour
         return false;
     }
 
+    /// <summary>Fell off their roof somehow (knocked over the edge, blown off, a fire...)? After a
+    /// few seconds they turn up back on the roof, dusting themselves off, so a rescue never gets
+    /// stuck with them lying in the street where the hook can't reach.</summary>
+    void CheckFellOffRoof()
+    {
+        if (body.Feet.y > home.y - 3f) { offRoofSince = -1f; lastOnRoof = body.Feet; return; }
+        if (offRoofSince < 0f) { offRoofSince = Time.time; Debug.Log($"[Survivor] {displayName} went over the edge at {lastOnRoof} (fire {(fire != null && fire.Active ? "burning" : "none")}, knocked {body.IsKnockedDown})"); return; }
+        if (Time.time - offRoofSince < 5f) return;
+        offRoofSince = -1f;
+        Vector3 back = fire != null && fire.Active ? fire.SafestSpot() + Vector3.up * 0.05f : home;
+        var rb = GetComponent<Rigidbody>();
+        body.StandUp(back, null);
+        rb.position = transform.position;
+        rb.linearVelocity = Vector3.zero;
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt) nt.Teleport(transform.position, transform.rotation, transform.localScale);
+        Say(L.fell, 3f);
+        Debug.Log($"[Survivor] {displayName} fell off the roof: back up at {back}");
+    }
+    float offRoofSince = -1f; Vector3 lastOnRoof;
+
+    // ------------------------------------------------------------------ Ledge Resident (host)
+
+    float patience, nextSwat;
+    const float PatienceNeeded = 10f;
+
+    /// <summary>Not having it: swats the hook away and tells the crew off, until they've hovered
+    /// close by and patiently for long enough. Returns true while he's still refusing.</summary>
+    bool Refusing(ref PlayerInput input)
+    {
+        Vector3 toHeli = heli.transform.position - transform.position;
+        var hrb = heli.GetComponent<Rigidbody>();
+        Vector3 hv = hrb.linearVelocity;
+        bool close = toHeli.magnitude < 15f, steady = new Vector2(hv.x, hv.z).magnitude < 3f;
+        if (close && steady) patience += Time.fixedDeltaTime;
+        if (patience >= PatienceNeeded)
+        {
+            Agreed.Value = true;
+            Say(L.agree, 3.5f);
+            if (RescueStartedAt < 0f) RescueStartedAt = Time.time;
+            return false;
+        }
+        // Shake a fist at them.
+        input.pitch = -40f;
+        input.grabRight = Mathf.Repeat(Time.time * 2.2f, 1f) < 0.5f;
+        if (HookAvailable(out Vector3 hookPos) && Vector3.Distance(body.Chest, hookPos) < 1.6f && Time.time > nextSwat)
+        {
+            // Bat it away.
+            Vector3 away = Flat(hookPos - body.Chest); if (away.sqrMagnitude < 0.01f) away = Flat(toHeli);
+            winch.hook.AddForce(away.normalized * 1.8f + Vector3.up * 0.3f, ForceMode.VelocityChange);
+            Say(Pick(L.refuse), 2f);
+            nextSwat = Time.time + 1.8f;
+            nextRemark = Time.time + 4f;
+        }
+        else if (close && Time.time > nextRemark) { Say(Pick(L.waiting), 2.5f); nextRemark = Time.time + 6f; }
+        return true;
+    }
+
+    /// <summary>Is that (flattened) point somewhere he can stand on his ledge?</summary>
+    bool OnLedge(Vector3 p)
+    {
+        var ls = LedgeSpot.Value;
+        Vector3 local = Quaternion.Euler(0f, -ls.w, 0f) * Flat(p - new Vector3(ls.x, ls.y, ls.z)); // z = out from the wall, x = along it
+        return Mathf.Abs(local.x) < 1.3f && local.z < 0.7f && local.z > -0.3f;
+    }
+
+    /// <summary>Put him on a ledge a few metres under the roofline of some building, facing open street.</summary>
+    bool PlaceOnLedge()
+    {
+        if (!FindLedgeSpot(out Vector3 stand, out float facing)) return false;
+        LedgeSpot.Value = new Vector4(stand.x, stand.y, stand.z, facing);
+        GetComponent<LedgePerch>()?.Rebuild(); // the slab under him now, before he's dropped onto it
+        var rb = GetComponent<Rigidbody>();
+        body.StandUp(stand + Vector3.up * 0.05f, null);
+        transform.rotation = Quaternion.Euler(0f, facing, 0f);
+        rb.position = transform.position; rb.rotation = transform.rotation;
+        rb.linearVelocity = Vector3.zero;
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt) nt.Teleport(transform.position, transform.rotation, transform.localScale);
+        home = stand;
+        patience = 0f; Agreed.Value = false;
+        Debug.Log($"[Survivor] {displayName} is on a ledge at {stand}, facing {facing:0}");
+        return true;
+    }
+
+    bool FindLedgeSpot(out Vector3 stand, out float facing)
+    {
+        stand = default; facing = 0f;
+        var boxes = new System.Collections.Generic.List<BoxCollider>();
+        foreach (var c in FindObjectsByType<BoxCollider>(FindObjectsSortMode.None))
+        {
+            if (c.isTrigger || c.attachedRigidbody != null || c.gameObject.layer == gameObject.layer) continue;
+            var b = c.bounds;
+            if (b.max.y < 14f || b.max.y > 34f || b.size.x < 8f || b.size.z < 8f || b.min.y > 1f) continue; // whole buildings, standing on the ground
+            float d = Vector2.Distance(new Vector2(b.center.x, b.center.z), new Vector2(transform.position.x, transform.position.z));
+            if (d < 40f || d > 160f || new Vector2(b.center.x, b.center.z).magnitude < 30f) continue;
+            bool nearDropOff = false;
+            foreach (var z in RescueZone.All) if (Vector3.Distance(z.transform.position, b.center) < 35f) nearDropOff = true;
+            if (!nearDropOff) boxes.Add(c);
+        }
+        int mask = GameLayers.Gameplay & ~(1 << gameObject.layer);
+        for (int attempt = 0; attempt < 200 && boxes.Count > 0; attempt++)
+        {
+            var c = boxes[Random.Range(0, boxes.Count)];
+            var t = c.transform;
+            Vector3 half = Vector3.Scale(c.size, t.lossyScale) * 0.5f, centre = t.TransformPoint(c.center);
+            int face = Random.Range(0, 4);
+            Vector3 n = face switch { 0 => t.forward, 1 => -t.forward, 2 => t.right, _ => -t.right };
+            Vector3 along = Vector3.Cross(Vector3.up, n);
+            float depth = face < 2 ? half.z : half.x, width = face < 2 ? half.x : half.z;
+            if (width < 4f) continue;
+            float top = c.bounds.max.y;
+            Vector3 wallPoint = centre + n * depth + along * Random.Range(-width + 3f, width - 3f);
+            wallPoint.y = top - 3.4f;
+            // the wall really is here (not an alcove or a neighbour in the way)
+            if (!Physics.Raycast(wallPoint + n * 1.5f, -n, out RaycastHit wall, 2.5f, mask, QueryTriggerInteraction.Ignore) || wall.collider != c) continue;
+            Vector3 s = wall.point + n * 0.45f;
+            // open air out front for the helicopter, and nothing overhead between the hook and him
+            if (Physics.Raycast(s + Vector3.up * 1f, n, 16f, mask, QueryTriggerInteraction.Ignore)) continue;
+            if (Physics.CheckBox(s + n * 2.5f + Vector3.up * 9f, new Vector3(6.5f, 3f, 6.5f), Quaternion.LookRotation(n), mask, QueryTriggerInteraction.Ignore)) continue;
+            if (Physics.Raycast(s + Vector3.up * 0.3f, Vector3.up, 9f, mask, QueryTriggerInteraction.Ignore)) continue;
+            if (Physics.CheckBox(s + Vector3.up * 1.1f + n * 0.1f, new Vector3(1.6f, 0.9f, 0.35f), Quaternion.LookRotation(n), mask, QueryTriggerInteraction.Ignore)) continue;
+            // a sheer drop all round (not a hop onto the neighbour's roof)
+            bool sheer = true;
+            foreach (var off in new[] { along * 3f, -along * 3f, n * 1.6f, n * 1.6f + along * 2f, n * 1.6f - along * 2f })
+                if (Physics.Raycast(s + off + Vector3.up * 0.5f, Vector3.down, 7f, mask, QueryTriggerInteraction.Ignore)) { sheer = false; break; }
+            if (!sheer) continue;
+            stand = s;
+            facing = Quaternion.LookRotation(n).eulerAngles.y;
+            return true;
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------ roof fire (host)
+
+    static double Now => NetworkManager.Singleton.ServerTime.Time;
+
+    void ScheduleFire() => fireAt = fire != null && Random.value < FireChance ? Time.time + (FireChance >= 1f ? Random.Range(3f, 5f) : Random.Range(12f, 35f)) : -1f; // "-fire 1" (testing): right away
+
+    void ResetFire()
+    {
+        Fire.Value = default;
+        Singed.Value = false;
+        ScheduleFire();
+    }
+
+    /// <summary>Light up the roof they're standing on, starting some way off from them.</summary>
+    void StartFire()
+    {
+        Vector3 at = chair != null ? chair.transform.position : body.Feet;
+        // The roof under them (looking past their own chair, or anything else that moves).
+        RaycastHit hit = default; bool found = false; float nearest = float.MaxValue;
+        foreach (var h in Physics.RaycastAll(at + Vector3.up * 1f, Vector3.down, 3f, GameLayers.Gameplay & ~(1 << gameObject.layer), QueryTriggerInteraction.Ignore))
+            if (h.rigidbody == null && h.collider is BoxCollider && h.distance < nearest) { nearest = h.distance; hit = h; found = true; }
+        if (!found) return;
+        var b = hit.collider.bounds;
+        if (b.size.x < 6f || b.size.z < 6f) return;
+        // Somewhere 6+ m away if the roof allows it (so there's a minute before it reaches them).
+        Vector3 origin = at; float best = -1f;
+        for (int i = 0; i < 12; i++)
+        {
+            var p = new Vector3(Random.Range(b.min.x + 1.5f, b.max.x - 1.5f), b.max.y, Random.Range(b.min.z + 1.5f, b.max.z - 1.5f));
+            float d = Flat(p - at).magnitude;
+            float score = d >= 6f ? 100f - d : d; // the nearest spot that's still 6 m off, else the farthest
+            if (score > best) { best = score; origin = p; }
+        }
+        Fire.Value = new FireState { origin = origin, roofMin = b.min, roofMax = b.max, start = Now, end = double.MaxValue };
+        nextFireRemark = 0f;
+        FireRemark();
+        Debug.Log($"[Fire] {displayName}'s roof caught fire {Flat(origin - at).magnitude:0.0} m away ({b.size.x:0}x{b.size.z:0} m roof)");
+    }
+
+    void FireRemark()
+    {
+        if (Time.time < nextFireRemark || L.fire == null) return;
+        Say(Pick(L.fire), 3f);
+        nextFireRemark = Time.time + Random.Range(6f, 9f);
+        nextRemark = Time.time + 8f;
+    }
+
+    /// <summary>Host: the flames got them (RoofFire calls this).</summary>
+    public void Burned()
+    {
+        if (Singed.Value) return;
+        Singed.Value = true;
+        Debug.Log($"[Fire] {displayName} got singed");
+        Say(L.singed, 3f);
+        nextFireRemark = Time.time + 5f;
+    }
+
     // ------------------------------------------------------------------ helpers
 
     bool HookAvailable(out Vector3 pos)
@@ -603,6 +884,10 @@ public class SurvivorBrain : NetworkBehaviour
         // On the hook she can't snag on the helicopter's belly (getting wedged under the hull
         // while the winch hauls would just rip her off the hook).
         SetHeliCollision(s != State.Hooked);
+        if (s == State.Seated && Fire.Value.start > 0.0 && Fire.Value.end > Now + 12.0)
+        {
+            var f = Fire.Value; f.end = Now + 8.0; Fire.Value = f; // they're out: the fire brigade can have it
+        }
         Stage.Value = s;
         stateSince = Time.time;
         jumped = false;

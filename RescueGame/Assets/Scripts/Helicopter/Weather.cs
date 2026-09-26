@@ -66,7 +66,7 @@ public class Weather : NetworkBehaviour
 
         // Push: the helicopter (more when it's high and exposed), the hook, anything hanging, people on roofs.
         if (heliRb && !heliRb.isKinematic && !GetComponent<HelicopterController>().IsLanded)
-            heliRb.AddForce(w * heliPush, ForceMode.Acceleration);
+            heliRb.AddForce(w * heliPush * (HeliUpgrades.Instance ? HeliUpgrades.Instance.PushScale : 1f), ForceMode.Acceleration);
         if (winch && winch.hook && winch.Length.Value > 1f) winch.hook.AddForce(w * hangingPush, ForceMode.Acceleration);
         if (Time.time > nextScan) { nextScan = Time.time + 2f; chairs = FindObjectsByType<Recliner>(FindObjectsSortMode.None); bodies = FindObjectsByType<CrewBody>(FindObjectsSortMode.None); }
         foreach (var r in chairs)
