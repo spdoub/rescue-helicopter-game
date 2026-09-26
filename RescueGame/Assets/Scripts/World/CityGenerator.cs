@@ -14,6 +14,8 @@ using UnityEngine;
 public class CityGenerator : MonoBehaviour
 {
     public int seed = 20260926;
+    [Tooltip("Fake distant skyline ring (off when the island around the city is real).")]
+    public bool skyline = true;
     [Tooltip("Brick_Red, Brick_Brown, Brick_Tan")]
     public Material[] brickMats = new Material[3];
     [Tooltip("TrimLight, TrimDark, WindowGlass, WindowFrame, RoofTar, WindowLit, RoofMetal, TankWood, Accent")]
@@ -86,7 +88,7 @@ public class CityGenerator : MonoBehaviour
         }
 
         Fill(city, env, rnd, keepClear);
-        Skyline(city, rnd);
+        if (current.skyline) Skyline(city, rnd);
         Streets(city, env);
     }
 

@@ -164,6 +164,37 @@ public static class WinchBuilder
         board.material = painted;
         EditorUtility.SetDirty(board);
 
+        // the island around the city (built at load by IslandGenerator)
+        var islandGo = GameObject.Find("Island") ?? new GameObject("Island");
+        var island = islandGo.GetComponent<IslandGenerator>(); if (!island) island = islandGo.AddComponent<IslandGenerator>();
+        Material Flat(string n, Color c, float ambient = 0.1f)
+        {
+            string p = "Assets/Materials/Level/M_" + n + ".mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(p);
+            if (m == null) { m = new Material(Shader.Find("RescueGame/Stylized Lit")); m.SetColor("_BaseColor", c); m.SetFloat("_Ambient", ambient); AssetDatabase.CreateAsset(m, p); }
+            return m;
+        }
+        var water = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Level/M_Water.mat");
+        if (water == null) { water = new Material(Shader.Find("RescueGame/Stylized Lit")); AssetDatabase.CreateAsset(water, "Assets/Materials/Level/M_Water.mat"); }
+        water.shader = Shader.Find("RescueGame/Stylized Lit");
+        water.SetColor("_BaseColor", new Color(0.20f, 0.46f, 0.58f, 1f));   // flat painterly sea (opaque: hides the sea floor)
+        water.SetFloat("_Ambient", 0.25f); water.SetFloat("_FlatShading", 0f);
+        EditorUtility.SetDirty(water);
+        island.mats = new[]
+        {
+            Flat("GrassA", new Color(0.47f, 0.62f, 0.30f)), Flat("GrassB", new Color(0.40f, 0.56f, 0.27f)),
+            Flat("Sand", new Color(0.88f, 0.80f, 0.58f)), Flat("RockA", new Color(0.52f, 0.47f, 0.42f)), Flat("RockB", new Color(0.44f, 0.40f, 0.37f)),
+            Flat("Snow", new Color(0.95f, 0.95f, 0.97f), 0.25f), water, Flat("Trunk", new Color(0.36f, 0.26f, 0.18f)),
+            Flat("LeafA", new Color(0.30f, 0.52f, 0.24f)), Flat("LeafB", new Color(0.55f, 0.58f, 0.22f)), Flat("LeafC", new Color(0.18f, 0.40f, 0.26f)),
+            Flat("CabinWood", new Color(0.50f, 0.34f, 0.22f)), Flat("Stone", new Color(0.62f, 0.60f, 0.56f)), Flat("CabinRoof", new Color(0.62f, 0.18f, 0.14f)),
+        };
+        EditorUtility.SetDirty(island);
+        var cityGen = GameObject.Find("City")?.GetComponent<CityGenerator>();
+        if (cityGen) { cityGen.skyline = false; EditorUtility.SetDirty(cityGen); }
+        // see the far side of the island: haze further out, cameras further
+        RenderSettings.fogStartDistance = 80f; RenderSettings.fogEndDistance = 1300f;
+        foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None)) { cam.farClipPlane = 3000f; EditorUtility.SetDirty(cam); }
+
         // city life: traffic, people, street furniture, ambience (built at load by CityLife)
         var cityGo = GameObject.Find("City");
         if (cityGo)

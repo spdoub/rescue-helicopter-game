@@ -18,8 +18,8 @@ RenderSettings:
   m_FogColor: {r: 0.94, g: 0.72, b: 0.5, a: 1}
   m_FogMode: 1
   m_FogDensity: 0.01
-  m_LinearFogStart: 40
-  m_LinearFogEnd: 330
+  m_LinearFogStart: 80
+  m_LinearFogEnd: 1300
   m_AmbientSkyColor: {r: 0.95, g: 0.72, b: 0.5, a: 1}
   m_AmbientEquatorColor: {r: 0.78, g: 0.55, b: 0.42, a: 1}
   m_AmbientGroundColor: {r: 0.35, g: 0.26, b: 0.24, a: 1}
@@ -668,7 +668,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 440
+  far clip plane: 3000
   field of view: 75
   orthographic: 0
   orthographic size: 5
@@ -6514,6 +6514,69 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1230215337}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1304368632
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1304368634}
+  - component: {fileID: 1304368633}
+  m_Layer: 0
+  m_Name: Island
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1304368633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304368632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce4e528a0b8d6472ea21d152b0829588, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IslandGenerator
+  seed: 20260926
+  mats:
+  - {fileID: 2100000, guid: 722c7ce9aa0b8483885d9dad1e2e327b, type: 2}
+  - {fileID: 2100000, guid: 97ba187f6dbff4544a43a5b4d36de17f, type: 2}
+  - {fileID: 2100000, guid: 83f113c2e308744e590a21d3a354c744, type: 2}
+  - {fileID: 2100000, guid: efce2281a61db40f3a37bcfa883e3842, type: 2}
+  - {fileID: 2100000, guid: 837b9a302fda14f92b6accd66d0fdb1c, type: 2}
+  - {fileID: 2100000, guid: 0bed5751dd23b4d85afe7bcb534a8605, type: 2}
+  - {fileID: 2100000, guid: 9cf75679bdbdf4f628ab3f0cdb731569, type: 2}
+  - {fileID: 2100000, guid: 41bca1464d7bb47369b5447329f58a5d, type: 2}
+  - {fileID: 2100000, guid: f10fa6192f1544fa48d2f0fb3e8ac27d, type: 2}
+  - {fileID: 2100000, guid: 76214bbe18a61432d9850a54d750ecac, type: 2}
+  - {fileID: 2100000, guid: fbf22c56c206d4464b1f3fb56eb49f60, type: 2}
+  - {fileID: 2100000, guid: 6b7a3502e692b47fb9e10965ab906ac0, type: 2}
+  - {fileID: 2100000, guid: 3e9090cb41a3a48fa945ac864d38fb9c, type: 2}
+  - {fileID: 2100000, guid: 6e375d239acb5479399abb36c9f92c7b, type: 2}
+  halfX: 800
+  halfZ: 600
+  cell: 10
+--- !u!4 &1304368634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304368632}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1391388006
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7148,6 +7211,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CityGenerator
   seed: 20260926
+  skyline: 0
   brickMats:
   - {fileID: 2100000, guid: 201ae13e78a3d4b73ac099654198dc25, type: 2}
   - {fileID: 2100000, guid: b903719d5b8bd46d495bf51b807b8bee, type: 2}
@@ -38480,3 +38544,4 @@ SceneRoots:
   - {fileID: 764367716}
   - {fileID: 1391388006}
   - {fileID: 1407406776}
+  - {fileID: 1304368634}

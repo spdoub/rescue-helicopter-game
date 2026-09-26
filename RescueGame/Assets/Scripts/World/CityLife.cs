@@ -50,6 +50,7 @@ public class CityLife : MonoBehaviour
         BuildTraffic();
         BuildPeople();
         BuildFurniture();
+        BuildBirds();
         if (ambience)
         {
             hum = gameObject.AddComponent<AudioSource>();
@@ -135,6 +136,11 @@ public class CityLife : MonoBehaviour
         {
             Part(go.transform, PrimitiveType.Cube, "Headlight", new Vector3(sx, 0.7f, L / 2f + 0.005f), new Vector3(0.32f, 0.16f, 0.02f), Lamp);
             Part(go.transform, PrimitiveType.Cube, "Taillight", new Vector3(sx, 0.7f, -L / 2f - 0.005f), new Vector3(0.32f, 0.14f, 0.02f), Tail);
+        }
+        if (!van && paint == CarColours[4]) // the yellow ones are taxis
+        {
+            var sign = Part(go.transform, PrimitiveType.Cube, "TaxiSign", new Vector3(0f, 1.62f, -0.25f), new Vector3(0.5f, 0.16f, 0.2f), Lamp);
+            Part(sign.transform, PrimitiveType.Cube, "TaxiSignStripe", new Vector3(0f, 0f, 0.51f), new Vector3(0.9f, 0.5f, 0.05f), Dark);
         }
         Part(go.transform, PrimitiveType.Cube, "Bumper", new Vector3(0f, 0.42f, L / 2f), new Vector3(W, 0.14f, 0.1f), Dark);
         Part(go.transform, PrimitiveType.Cube, "BumperB", new Vector3(0f, 0.42f, -L / 2f), new Vector3(W, 0.14f, 0.1f), Dark);
@@ -291,6 +297,49 @@ public class CityLife : MonoBehaviour
                 }
             }
         }
+        // parked cars along kerbs that have room for them (facing the way that lane runs)
+        var parked = new GameObject("ParkedCars").transform; parked.SetParent(transform, false);
+        var footprints = new List<Bounds>();
+        foreach (Transform b in city) { var r = b.GetComponent<Renderer>(); if (r && (b.name.StartsWith("Filler_") || b.name.StartsWith("Building_"))) footprints.Add(r.bounds); }
+        var hospT = GameObject.Find("Hospital");
+        Vector2 hospP = hospT ? new Vector2(hospT.transform.position.x, hospT.transform.position.z) : new Vector2(9999f, 9999f);
+        bool Spot(Vector3 p, Bounds mine)
+        {
+            var q = new Vector2(p.x, p.z);
+            if (q.magnitude < 22f || Vector2.Distance(q, hospP) > 0f && Vector2.Distance(q, hospP) < 16f || q.magnitude > 165f) return false;
+            foreach (var f in footprints) { if (f == mine) continue; if (p.x > f.min.x - 1f && p.x < f.max.x + 1f && p.z > f.min.z - 1f && p.z < f.max.z + 1f) return false; }
+            return true;
+        }
+        foreach (Transform b in city)
+        {
+            if (!b.name.StartsWith("Filler_")) continue;
+            var rend = b.GetComponent<Renderer>(); if (!rend) continue;
+            float hw = 0f, hd = 0f;
+            foreach (var mc in b.GetComponentsInChildren<BoxCollider>()) if (mc.size.y > 4f) { hw = Mathf.Max(hw, mc.size.x / 2f); hd = Mathf.Max(hd, mc.size.z / 2f); }
+            if (hw < 3f) continue;
+            foreach (var n in new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back })
+            {
+                float half = Mathf.Abs(n.x) > 0.5f ? hw : hd, along = Mathf.Abs(n.x) > 0.5f ? hd : hw;
+                Vector3 e = b.TransformPoint(n * half), nW = b.TransformDirection(n), aW = Vector3.Cross(Vector3.up, nW);
+                if (Mathf.Abs(Mathf.Abs(nW.x) - Mathf.Abs(nW.z)) < 0.5f) continue;             // a face on the diagonal: skip
+                bool xStreet = Mathf.Abs(nW.x) > 0.7f;
+                float coord = xStreet ? e.x : e.z, sgn = Mathf.Sign(xStreet ? nW.x : nW.z);
+                // the street's centre line on this side of the building
+                float line = (Mathf.Round(coord / pitch - 0.5f * sgn) + 0.5f * sgn) * pitch;
+                if ((line - coord) * sgn < 0f) line += sgn * pitch;
+                float clearance = (line - coord) * sgn;                                             // wall -> lane centre
+                if (clearance < 6.2f) continue;                                                     // kerb 1.5 + car 1.8 + gap 1.6 + lane
+                float yaw = xStreet ? (sgn > 0 ? 180f : 0f) : (sgn > 0 ? 90f : -90f);
+                for (float t = -along + 2.6f; t <= along - 2.6f; t += 5.6f)
+                {
+                    if (rnd.NextDouble() > 0.55) continue;
+                    Vector3 p = e + nW * 2.6f + aW * t;
+                    if (!Spot(p, rend.bounds)) continue;
+                    var car = MakeCar(parked, CarColours[rnd.Next(CarColours.Length)], rnd.Next(5) == 0);
+                    car.t.SetPositionAndRotation(p, Quaternion.Euler(0f, yaw + (float)(rnd.NextDouble() - 0.5) * 4f, 0f));
+                }
+            }
+        }
         var go = new GameObject("Furniture"); go.transform.SetParent(transform, false);
         go.AddComponent<MeshFilter>().sharedMesh = kit.ToMesh("Furniture");
         var mats = gen.MatsFor("Brick_Red"); mats[TrimLight] = gen.roadPaint;
@@ -314,6 +363,57 @@ public class CityLife : MonoBehaviour
         col.color = g;
         var r = go.GetComponent<ParticleSystemRenderer>(); r.sharedMaterial = smokeMaterial; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         ps.Play();
+    }
+
+    // ------------------------------------------------------------------ birds
+
+    class Flock { public Transform[] birds; public Transform[] wings; public Vector3 centre; public float radius, height, speed, phase; }
+    readonly List<Flock> flocks = new();
+
+    void BuildBirds()
+    {
+        var root = new GameObject("Birds").transform; root.SetParent(transform, false);
+        var grey = new Color(0.4f, 0.4f, 0.45f);
+        for (int f = 0; f < 4; f++)
+        {
+            var fl = new Flock
+            {
+                centre = new Vector3((float)(rnd.NextDouble() - 0.5) * 220f, 0f, (float)(rnd.NextDouble() - 0.5) * 220f),
+                radius = 25f + (float)rnd.NextDouble() * 30f, height = 30f + (float)rnd.NextDouble() * 25f,
+                speed = 9f + (float)rnd.NextDouble() * 4f, phase = (float)rnd.NextDouble() * 100f,
+            };
+            int n = 6 + rnd.Next(6);
+            fl.birds = new Transform[n]; fl.wings = new Transform[n * 2];
+            for (int i = 0; i < n; i++)
+            {
+                var b = new GameObject("Bird").transform; b.SetParent(root, false);
+                Part(b, PrimitiveType.Cube, "Body", Vector3.zero, new Vector3(0.12f, 0.1f, 0.35f), grey);
+                var wl = Part(b, PrimitiveType.Cube, "WingL", new Vector3(-0.3f, 0f, 0f), new Vector3(0.55f, 0.03f, 0.2f), grey).transform;
+                var wr = Part(b, PrimitiveType.Cube, "WingR", new Vector3(0.3f, 0f, 0f), new Vector3(0.55f, 0.03f, 0.2f), grey).transform;
+                fl.birds[i] = b; fl.wings[i * 2] = wl; fl.wings[i * 2 + 1] = wr;
+            }
+            flocks.Add(fl);
+        }
+    }
+
+    void UpdateBirds(double T)
+    {
+        foreach (var fl in flocks)
+        {
+            float a = (float)(T * fl.speed / fl.radius) + fl.phase;
+            for (int i = 0; i < fl.birds.Length; i++)
+            {
+                // a loose V behind the leader, each bird bobbing on its own
+                float ai = a - i * 0.06f;
+                Vector3 p = fl.centre + new Vector3(Mathf.Cos(ai) * fl.radius, fl.height + Mathf.Sin(ai * 2.3f + i) * 1.5f + (i % 2 == 0 ? i * 0.4f : -i * 0.4f), Mathf.Sin(ai) * fl.radius)
+                          + new Vector3(Mathf.Sin(ai) , 0f, -Mathf.Cos(ai)) * ((i % 2 == 0 ? 1 : -1) * i * 0.9f);
+                Vector3 fwd = new Vector3(-Mathf.Sin(ai), 0f, Mathf.Cos(ai));
+                fl.birds[i].SetPositionAndRotation(p, Quaternion.LookRotation(fwd));
+                float flap = Mathf.Sin((float)(T * 7.0) + i * 1.3f) * 35f;
+                fl.wings[i * 2].localRotation = Quaternion.Euler(0f, 0f, flap);
+                fl.wings[i * 2 + 1].localRotation = Quaternion.Euler(0f, 0f, -flap);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ every frame
@@ -390,6 +490,7 @@ public class CityLife : MonoBehaviour
             pn.rArm.localRotation = Quaternion.Euler(swing * 0.8f, 0f, -8f);
         }
 
+        UpdateBirds(T);
         if (hum) hum.volume = 0.22f * Mathf.Clamp01(1f - (camPos.y - 8f) / 60f);
     }
 

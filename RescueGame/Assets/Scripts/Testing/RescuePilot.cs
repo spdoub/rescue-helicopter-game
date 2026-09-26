@@ -73,7 +73,7 @@ public class RescuePilot
                 if (phase == Phase.ToPickup) holdY = survivor.transform.position.y + 9f;
                 target.y = holdY;
                 // Cruise above the rooftops, only coming down once nearly there.
-                if (phase == Phase.ToPickup && Flat(target - h.position).magnitude > 25f) target.y = Mathf.Max(holdY, CruiseAltitude);
+                if (phase == Phase.ToPickup && Flat(target - h.position).magnitude > 25f) target.y = Mathf.Max(holdY, Mathf.Max(CruiseAltitude, survivor.transform.position.y + 40f));
                 // The chair can't walk to the hook: in wind the hook hangs off to one side, so
                 // creep the hover over until the hook itself is above the strap (as a pilot would).
                 if (phase == Phase.Hold && (survivor.chair != null || ledge) && survivor.Current == SurvivorBrain.State.Waiting)

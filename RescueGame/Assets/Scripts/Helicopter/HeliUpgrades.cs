@@ -116,7 +116,7 @@ public class HeliUpgrades : NetworkBehaviour
         0 => part < 3 ? 1 : 2,            // motor housing + drum + cap; level 2 adds a stripe
         1 => part < 4 ? 1 : 2,            // one tank + straps per side; level 2 adds a second pair
         2 => part < 3 ? 1 : 2,            // belly + nose plates; level 2 adds side skirts
-        _ => part < 3 ? 1 : 2,            // tail stabiliser + end fins; level 2 adds a ventral fin
+        _ => part < 4 ? 1 : 2,            // wider tailplane + end plates; level 2 adds a ventral fin
     };
 
     void BuildParts()
@@ -137,37 +137,37 @@ public class HeliUpgrades : NetworkBehaviour
             Part(PrimitiveType.Cylinder, "WinchMotorStripe", tipLocal + new Vector3(-0.35f, 0.22f, 0f), new Vector3(0.27f, 0.035f, 0.27f), new Vector3(0, 0, 90), yellow),
         };
 
-        // Aux tanks: long cylinders strapped outboard of the skids.
-        GameObject Tank(string n, float x, float z) => Part(PrimitiveType.Capsule, n, new Vector3(x, 0.42f, z), new Vector3(0.36f, 0.75f, 0.36f), new Vector3(90, 0, 0), olive);
-        GameObject Strap(string n, float x, float z) => Part(PrimitiveType.Cylinder, n, new Vector3(x, 0.42f, z), new Vector3(0.38f, 0.03f, 0.38f), new Vector3(90, 0, 0), dark);
+        // Aux tanks: long cylinders strapped outboard of the skid struts, under the doors' sills.
+        GameObject Tank(string n, float x, float z) => Part(PrimitiveType.Capsule, n, new Vector3(x, 0.5f, z), new Vector3(0.36f, 0.75f, 0.36f), new Vector3(90, 0, 0), olive);
+        GameObject Strap(string n, float x, float z) => Part(PrimitiveType.Cylinder, n, new Vector3(x, 0.5f, z), new Vector3(0.38f, 0.03f, 0.38f), new Vector3(90, 0, 0), dark);
         parts[1] = new[]
         {
-            Tank("AuxTank_L", -1.55f, 0.2f), Tank("AuxTank_R", 1.55f, 0.2f),
-            Strap("AuxStrap_L", -1.55f, 0.2f), Strap("AuxStrap_R", 1.55f, 0.2f),
-            Tank("AuxTank_L2", -1.55f, -1.5f), Tank("AuxTank_R2", 1.55f, -1.5f),
-            Strap("AuxStrap_L2", -1.55f, -1.5f), Strap("AuxStrap_R2", 1.55f, -1.5f),
+            Tank("AuxTank_L", -1.32f, 0.9f), Tank("AuxTank_R", 1.32f, 0.9f),
+            Strap("AuxStrap_L", -1.32f, 0.9f), Strap("AuxStrap_R", 1.32f, 0.9f),
+            Tank("AuxTank_L2", -1.32f, -0.8f), Tank("AuxTank_R2", 1.32f, -0.8f),
+            Strap("AuxStrap_L2", -1.32f, -0.8f), Strap("AuxStrap_R2", 1.32f, -0.8f),
         };
 
-        // Armour: plates under the belly and over the nose, then side skirts.
+        // Armour: a plate under the belly (hull bottom is at 0.70) and one under the nose, then side skirts below the sills.
         parts[2] = new[]
         {
-            Part(PrimitiveType.Cube, "ArmourBelly", new Vector3(0f, 0.5f, 0.4f), new Vector3(1.5f, 0.05f, 3.2f), Vector3.zero, steel),
-            Part(PrimitiveType.Cube, "ArmourBellyFront", new Vector3(0f, 0.53f, 2.05f), new Vector3(1.2f, 0.05f, 0.6f), new Vector3(-12, 0, 0), steel),
-            Part(PrimitiveType.Cube, "ArmourStripe", new Vector3(0f, 0.475f, 0.4f), new Vector3(1.52f, 0.02f, 0.25f), Vector3.zero, yellow),
-            Part(PrimitiveType.Cube, "ArmourSkirt_L", new Vector3(-1.2f, 0.62f, -0.3f), new Vector3(0.04f, 0.28f, 2.2f), Vector3.zero, steel),
-            Part(PrimitiveType.Cube, "ArmourSkirt_R", new Vector3(1.2f, 0.62f, -0.3f), new Vector3(0.04f, 0.28f, 2.2f), Vector3.zero, steel),
+            Part(PrimitiveType.Cube, "ArmourBelly", new Vector3(0f, 0.665f, 0.9f), new Vector3(1.5f, 0.05f, 3.6f), Vector3.zero, steel),
+            Part(PrimitiveType.Cube, "ArmourBellyFront", new Vector3(0f, 0.75f, 3.05f), new Vector3(1.1f, 0.05f, 0.7f), new Vector3(-28, 0, 0), steel),
+            Part(PrimitiveType.Cube, "ArmourStripe", new Vector3(0f, 0.64f, 0.9f), new Vector3(1.52f, 0.02f, 0.25f), Vector3.zero, yellow),
+            Part(PrimitiveType.Cube, "ArmourSkirt_L", new Vector3(-1.0f, 0.84f, 0.5f), new Vector3(0.05f, 0.22f, 2.2f), Vector3.zero, steel),
+            Part(PrimitiveType.Cube, "ArmourSkirt_R", new Vector3(1.0f, 0.84f, 0.5f), new Vector3(0.05f, 0.22f, 2.2f), Vector3.zero, steel),
         };
 
-        // Stabiliser: a horizontal tailplane with end plates near the back of the tail boom.
-        Transform boom = FindDeep(transform, "TailBoom");
-        Vector3 back = boom ? transform.InverseTransformPoint(boom.GetComponent<Renderer>() ? boom.GetComponent<Renderer>().bounds.center : boom.position) : new Vector3(0f, 1.9f, -4.5f);
-        back += new Vector3(0f, 0.05f, -1.5f);
+        // Stabiliser: the body already has a tailplane at (0, 2.35, -3.85); the upgrade extends its span with
+        // yellow tips and tall end plates, then adds a ventral fin.
+        Vector3 back = new Vector3(0f, 2.35f, -3.85f);
         parts[3] = new[]
         {
-            Part(PrimitiveType.Cube, "Stabiliser", back, new Vector3(2.4f, 0.07f, 0.6f), Vector3.zero, steel),
-            Part(PrimitiveType.Cube, "StabiliserFin_L", back + new Vector3(-1.2f, 0.12f, -0.03f), new Vector3(0.05f, 0.45f, 0.55f), Vector3.zero, yellow),
-            Part(PrimitiveType.Cube, "StabiliserFin_R", back + new Vector3(1.2f, 0.12f, -0.03f), new Vector3(0.05f, 0.45f, 0.55f), Vector3.zero, yellow),
-            Part(PrimitiveType.Cube, "StabiliserVentral", back + new Vector3(0f, -0.3f, -0.3f), new Vector3(0.05f, 0.55f, 0.6f), new Vector3(-20, 0, 0), yellow),
+            Part(PrimitiveType.Cube, "StabiliserExt_L", back + new Vector3(-1.25f, 0f, 0f), new Vector3(0.6f, 0.07f, 0.42f), Vector3.zero, yellow),
+            Part(PrimitiveType.Cube, "StabiliserExt_R", back + new Vector3(1.25f, 0f, 0f), new Vector3(0.6f, 0.07f, 0.42f), Vector3.zero, yellow),
+            Part(PrimitiveType.Cube, "StabiliserFin_L", back + new Vector3(-1.52f, 0.2f, -0.03f), new Vector3(0.05f, 0.6f, 0.55f), Vector3.zero, steel),
+            Part(PrimitiveType.Cube, "StabiliserFin_R", back + new Vector3(1.52f, 0.2f, -0.03f), new Vector3(0.05f, 0.6f, 0.55f), Vector3.zero, steel),
+            Part(PrimitiveType.Cube, "StabiliserVentral", back + new Vector3(0f, -0.55f, -0.2f), new Vector3(0.05f, 0.6f, 0.7f), new Vector3(-20, 0, 0), yellow),
         };
         foreach (var set in parts) foreach (var p in set) p.SetActive(false);
     }

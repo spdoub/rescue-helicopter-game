@@ -211,6 +211,8 @@ public class NetworkBootstrap : MonoBehaviour
     }
 
     bool helpOpen = true, helpAutoClosed;
+    /// <summary>Where the help panel is on screen right now (empty when hidden), so other HUD bits keep clear of it.</summary>
+    public static Rect HelpRect { get; private set; }
 
     void HelpToggle()
     {
@@ -223,9 +225,11 @@ public class NetworkBootstrap : MonoBehaviour
     {
         if (!helpOpen)
         {
+            HelpRect = new Rect(0, Screen.height - 32, 320, 32);
             GUI.Label(new Rect(12, Screen.height - 28, 300, 24), "H: help / invite friends");
             return;
         }
+        HelpRect = new Rect(0, Screen.height - 270, 340, 270);
         GUILayout.BeginArea(new Rect(12, Screen.height - 262, 320, 250), GUI.skin.box);
         if (nm.IsHost)
             GUILayout.Label($"Hosting - friends join at {localAddress}   Players: {nm.ConnectedClientsIds.Count}");

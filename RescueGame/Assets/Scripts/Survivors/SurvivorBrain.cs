@@ -61,6 +61,27 @@ public class SurvivorBrain : NetworkBehaviour
     public NetworkVariable<Vector4> LedgeSpot = new();
     /// <summary>Ledge Resident: has he been talked round into being rescued?</summary>
     public NetworkVariable<bool> Agreed = new();
+    /// <summary>Where this call is: 0 rooftop, 1 beach, 2 mountain, 3 cliff top, 4 lake shore, 5 forest (for the HUD).</summary>
+    public NetworkVariable<byte> Place = new();
+    public static readonly string[] PlaceNames = { "the rooftop", "the beach", "the mountain", "the cliff top", "the lake shore", "the forest" };
+
+    /// <summary>Chance a new call is somewhere out on the island instead of a city roof. "-wild 1" forces it (dev builds); playtests default to roofs.</summary>
+    public static float WildChance
+    {
+        get
+        {
+            if (wildChance < 0f)
+            {
+                var args = System.Environment.GetCommandLineArgs();
+                wildChance = 0.45f;
+                for (int i = 0; i < args.Length; i++) if (args[i] == "-scenario") wildChance = 0f;
+                for (int i = 0; i < args.Length - 1; i++)
+                    if (args[i] == "-wild" && float.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f)) wildChance = f;
+            }
+            return wildChance;
+        }
+    }
+    static float wildChance = -1f;
 
     /// <summary>Chance a call comes with a roof fire. "-fire 0.5" on the command line sets it;
     /// playtests (which pass -scenario) get none unless they ask.</summary>
@@ -604,7 +625,10 @@ public class SurvivorBrain : NetworkBehaviour
             Say(Pick(L.waiting), 3f);
             return;
         }
-        if (!FindRoofSpot(out Vector3 spot)) { reportedAt = Time.time; return; }
+        byte place = 0;
+        bool wild = IslandGenerator.Current != null && Random.value < WildChance && FindWildSpot(out Vector3 spot, out place);
+        if (!wild && !FindRoofSpot(out spot)) { reportedAt = Time.time; return; }
+        Place.Value = place;
         Weather.Instance?.Roll(); // new call, new weather
         if (kind == Kind.ReclinerGuy && chair != null)
         {
@@ -628,6 +652,42 @@ public class SurvivorBrain : NetworkBehaviour
         Enter(State.Waiting);
         Say(kind == Kind.DogPerson ? Pick(CallingDog) : Pick(L.waiting), 3f);
         if (kind == Kind.DogPerson && dog != null) dog.Relocate(spot + transform.right * 1.5f + Vector3.up * 0.3f);
+    }
+
+    /// <summary>Somewhere out on the island: a beach, a mountain shoulder, the cliff top, the lake shore or a forest clearing.</summary>
+    bool FindWildSpot(out Vector3 spot, out byte place)
+    {
+        spot = default; place = 0;
+        var isl = IslandGenerator.Current;
+        int mask = GameLayers.Gameplay & ~(1 << gameObject.layer);
+        for (int attempt = 0; attempt < 120; attempt++)
+        {
+            int kind = 1 + Random.Range(0, 5);
+            float x, z;
+            switch (kind)
+            {
+                case 1: x = Random.Range(-380f, 380f); z = Random.Range(-500f, -320f); break;   // beach
+                case 2: x = Random.Range(-300f, 300f); z = Random.Range(300f, 520f); break;     // mountains
+                case 3: x = Random.Range(-640f, -480f); z = Random.Range(-220f, 220f); break;   // cliff top
+                case 4: x = 470f + Random.Range(-160f, 160f); z = 120f + Random.Range(-160f, 160f); break; // lake
+                default: x = Random.Range(-450f, 450f); z = Random.Range(-260f, 280f); break;  // hills / forest
+            }
+            if (new Vector2(x, z).magnitude < 300f) continue;                // (the city)
+            float h = isl.Height(x, z);
+            if (h < IslandGenerator.SeaLevel + 1.5f) continue;
+            if (kind == 1 && h > IslandGenerator.SeaLevel + 4f) continue;      // beach: right by the water
+            if (kind == 2 && h < 60f) continue;                                // mountain: properly up
+            if (kind == 4 && Vector2.Distance(new Vector2(x, z), new Vector2(470f, 120f)) > 130f) continue;
+            // stand on the real terrain, on something walkable, with the sky open above
+            if (!Physics.Raycast(new Vector3(x, h + 30f, z), Vector3.down, out RaycastHit hit, 60f, mask, QueryTriggerInteraction.Ignore)) continue;
+            if (hit.normal.y < 0.9f) continue;
+            Vector3 feet = hit.point + Vector3.up * 0.05f;
+            if (Physics.CheckBox(feet + Vector3.up * 1.1f, new Vector3(2.2f, 0.95f, 2.2f), Quaternion.identity, mask, QueryTriggerInteraction.Ignore)) continue;
+            if (Physics.Raycast(feet + Vector3.up * 2f, Vector3.up, 30f, mask, QueryTriggerInteraction.Ignore)) continue;
+            spot = feet; place = (byte)kind;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>A clear spot on a flat roof 50-150 m from where she is, 6-26 m up, away from the hospital.</summary>

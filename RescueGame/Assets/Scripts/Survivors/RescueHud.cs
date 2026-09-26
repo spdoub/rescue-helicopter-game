@@ -125,7 +125,7 @@ public class RescueHud : MonoBehaviour
                     goal = s.kind == SurvivorBrain.Kind.ReclinerGuy ? $"Pick up {s.displayName} - hook his chair's strap"
                          : s.kind == SurvivorBrain.Kind.LedgeResident ? (s.Agreed.Value ? $"Pick up {s.displayName} - bring the hook right up to his ledge"
                                                                                         : $"Talk {s.displayName} round - hover close by, nice and steady")
-                         : $"Pick up {s.displayName} from the rooftop";
+                         : $"Pick up {s.displayName} from {SurvivorBrain.PlaceNames[Mathf.Min(s.Place.Value, 5)]}";
                     if (s.Fire.Value.start > 0.0) goal += s.Singed.Value ? "  - SINGED! Hurry!" : "  - THE ROOF IS ON FIRE!";
                     Marker(cam, s.transform.position + Vector3.up * 1.8f, s.displayName);
                     break;
@@ -154,6 +154,7 @@ public class RescueHud : MonoBehaviour
         // The mission text (top left) and the money (top right) are no-go areas for markers.
         placed.Add(new Rect(0f, 0f, 660f, panelBottom));
         placed.Add(new Rect(Screen.width - 340f, 0f, 340f, 80f));
+        placed.Add(NetworkBootstrap.HelpRect);
         foreach (var (world, label) in pending) DrawMarker(cam, world, label);
         pending.Clear();
     }
