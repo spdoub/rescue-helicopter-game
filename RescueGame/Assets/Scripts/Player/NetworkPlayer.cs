@@ -18,6 +18,8 @@ public class NetworkPlayer : NetworkBehaviour
     public static NetworkPlayer Local { get; private set; }
 
     public float mouseSensitivity = 0.12f;
+    /// <summary>How far down you can look (degrees) - stops the camera tucking under your chin.</summary>
+    public const float MaxLookDown = 80f;
 
     /// <summary>This player's animated body (registered by CrewVisual; it detaches while ragdolled).</summary>
     public CrewVisual Visual { get; set; }
@@ -107,7 +109,7 @@ public class NetworkPlayer : NetworkBehaviour
     }
 
     /// <summary>Test screenshots: point the camera.</summary>
-    public void SetLookForTests(float pitch) => LookPitch = pitch;
+    public void SetLookForTests(float pitch) => LookPitch = Mathf.Min(pitch, MaxLookDown);
 
     [Rpc(SendTo.Owner)]
     void FaceRpc(float yaw)
@@ -141,7 +143,7 @@ public class NetworkPlayer : NetworkBehaviour
         {
             Vector2 d = mouse.delta.ReadValue() * mouseSensitivity;
             LookYaw += d.x;
-            LookPitch = Mathf.Clamp(LookPitch - d.y, -85f, 85f);
+            LookPitch = Mathf.Clamp(LookPitch - d.y, -85f, MaxLookDown);
         }
 
         if (kb != null)

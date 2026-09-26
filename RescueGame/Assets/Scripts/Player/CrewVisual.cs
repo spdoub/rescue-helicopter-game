@@ -13,8 +13,9 @@ using UnityEngine;
 /// - Walking backwards plays the walk in reverse; sideways/diagonal moves turn the legs.
 /// - Ragdoll: when knocked down the skeleton goes fully limp, loosely tethered to the physics
 ///   body so it flops around but stays where the player really is.
-/// - First person: your own hips, torso, neck and head are hidden from your own camera (they still cast
-///   shadows and everyone else sees them), so you can never see inside your body; arms and legs stay.
+/// - First person: only your own head and neck are hidden from your own camera (they still cast
+///   shadows and everyone else sees them); the camera sits in front of your face so the rest of
+///   your body is always seen from the outside.
 /// - Feet: never sink into the ground; each foot is lifted onto whatever is under it and tilted to match.
 /// Lives on the model (same object as the Animator).
 /// </summary>
@@ -61,6 +62,9 @@ public class CrewVisual : MonoBehaviour
     public Vector3 collectiveGrip = new(0.12f, 1.35f, 1.95f);
 
     public Vector3 HeadPosition => head ? head.position : transform.position + Vector3.up * 1.35f;
+
+    /// <summary>The animated head's position this frame (follows leaning/bobbing).</summary>
+    public Vector3 HeadBonePosition => head ? head.position : transform.position + Vector3.up * 1.2f;
 
     /// <summary>Where your eyes are this frame: just in front of the animated head.</summary>
     public Vector3 EyePosition { get; private set; }
@@ -337,20 +341,15 @@ public class CrewVisual : MonoBehaviour
     }
 
     /// <summary>
-    /// Mark every vertex mostly driven by the hips, spine, chest, shoulders, neck or head (UV channel 3),
-    /// so the shader can hide them from this player's own camera. Arms, hands and legs stay.
+    /// Mark every vertex mostly driven by the neck or head (UV channel 3), so the shader can hide
+    /// them from this player's own camera. The camera sits in front of the face, so the rest of the
+    /// body is only ever seen from the outside.
     /// Only done for your own character, on a private copy of the mesh.
     /// </summary>
     void TagTorso()
     {
         torsoTagged = true;
         var hidden = new System.Collections.Generic.HashSet<Transform>();
-        foreach (var b in new[] { HumanBodyBones.Hips, HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest,
-                                  HumanBodyBones.LeftShoulder, HumanBodyBones.RightShoulder })
-        {
-            var t = anim.GetBoneTransform(b);
-            if (t) hidden.Add(t);
-        }
         if (neck) foreach (var t in neck.GetComponentsInChildren<Transform>()) hidden.Add(t);
         else if (head) foreach (var t in head.GetComponentsInChildren<Transform>()) hidden.Add(t);
 

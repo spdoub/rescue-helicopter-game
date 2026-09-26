@@ -41,6 +41,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
     View view = View.FirstPerson;
     float yaw, pitch;
     float bobHeight;
+    Vector3 headLean;
     NetworkHelicopter netHeli;
     Camera cam;
 
@@ -122,9 +123,9 @@ public class FirstPersonSeatCamera : MonoBehaviour
                 // Knocked flat: ride along with the floppy ragdoll's head.
                 // Eyes ride on the animated head (so the body stays lined up underneath you);
                 // the model detaches from the body while ragdolled.
-                // Position comes from the steady body (so leaning into stops doesn't rock the
-                // view), just ahead of the face; only the up-and-down walking bob comes from the
-                // animated head, smoothed.
+                // In front of the face: horizontally we follow the animated head (so when the body
+                // leans into a run the camera stays ahead of the chest, never inside it), smoothed;
+                // vertically the steady eye height plus a smoothed walking bob.
                 var visual = me.Visual;
                 Vector3 steady = me.GetComponent<CrewBody>().Eye;
                 if (visual != null && visual.Ragdolled)
@@ -132,9 +133,12 @@ public class FirstPersonSeatCamera : MonoBehaviour
                 else
                 {
                     Vector3 facing = Quaternion.Euler(0f, me.LookYaw, 0f) * Vector3.forward;
+                    Vector3 headFlat = visual != null ? visual.HeadBonePosition : steady;
+                    Vector3 lean = headFlat - steady; lean.y = 0f;
+                    headLean = Vector3.Lerp(headLean, lean, 1f - Mathf.Exp(-14f * Time.deltaTime));
                     float bob = visual != null ? visual.EyePosition.y - steady.y : 0f;
                     bobHeight = Mathf.Lerp(bobHeight, bob, 1f - Mathf.Exp(-10f * Time.deltaTime));
-                    transform.position = steady + facing * eyeForward + Vector3.up * bobHeight;
+                    transform.position = steady + headLean + facing * eyeForward + Vector3.up * bobHeight;
                 }
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }
