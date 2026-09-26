@@ -158,6 +158,7 @@ public class NetworkPlayer : NetworkBehaviour
         {
             if (kb.spaceKey.wasPressedThisFrame && !SeatedAsPilot.Value) jumpQueued = true;
             if (kb.eKey.wasPressedThisFrame) ToggleSeatRpc(false);
+            if (kb.fKey.wasPressedThisFrame) TryToggleNearestDoor();
         }
         if (ForceSeatForTests && IsSpawned && heli != null && heli.IsSpawned)
         {
@@ -261,6 +262,39 @@ public class NetworkPlayer : NetworkBehaviour
     static void Set(NetworkVariable<bool> v, bool value)
     {
         if (v.Value != value) v.Value = value;
+    }
+
+    public const float DoorReach = 2.2f;
+
+    /// <summary>Owner: open/close whichever cabin door you're standing next to.</summary>
+    public void TryToggleNearestDoor()
+    {
+        SlidingDoor best = null; float bestD = DoorReach;
+        foreach (var d in FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None))
+        {
+            float dist = Vector3.Distance(body.Eye, d.HandlePoint);
+            if (dist < bestD) { bestD = dist; best = d; }
+        }
+        if (best != null) ToggleDoorRpc(best.left);
+    }
+
+    /// <summary>Is there a door within reach? (for the on-screen hint)</summary>
+    public bool NearDoor
+    {
+        get
+        {
+            foreach (var d in FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None))
+                if (Vector3.Distance(body.Eye, d.HandlePoint) < DoorReach) return true;
+            return false;
+        }
+    }
+
+    [Rpc(SendTo.Server)]
+    void ToggleDoorRpc(bool left)
+    {
+        if (heli == null) return;
+        var d = System.Array.Find(FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None), x => x.left == left);
+        if (d != null && Vector3.Distance(body.Eye, d.HandlePoint) < DoorReach + 0.5f) heli.ToggleDoor(left);
     }
 
     [Rpc(SendTo.Server)]

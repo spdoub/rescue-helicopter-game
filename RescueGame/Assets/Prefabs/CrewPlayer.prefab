@@ -111,8 +111,8 @@ MonoBehaviour:
   jumpBuffer: 0.15
   knockdownAccel: 12
   knockdownSlope: 40
-  hardLandingSpeed: 9
-  longFallTime: 1.1
+  hardLandingSpeed: 13
+  longFallTime: 2.2
   knockdownTime: 2
   getUpTime: 0.4
   grabReach: 2

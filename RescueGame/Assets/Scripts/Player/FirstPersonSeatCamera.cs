@@ -169,8 +169,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
         const float radius = 0.1f;
         Vector3 d = to - from; float len = d.magnitude;
         if (len < 1e-4f) return to;
-        int mask = GameLayers.Gameplay & ~(1 << GameLayers.Crew);
-        if (Physics.SphereCast(from, radius, d / len, out RaycastHit hit, len, mask, QueryTriggerInteraction.Ignore))
+        if (Physics.SphereCast(from, radius, d / len, out RaycastHit hit, len, GameLayers.CameraSolid, QueryTriggerInteraction.Ignore))
             return from + d / len * Mathf.Max(0f, hit.distance - 0.01f);
         return to;
     }

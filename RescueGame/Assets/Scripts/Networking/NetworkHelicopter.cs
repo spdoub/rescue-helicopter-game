@@ -20,6 +20,16 @@ public class NetworkHelicopter : NetworkBehaviour
     /// <summary>The controls being applied (collective, pitch, roll, yaw), so everyone sees the stick move.</summary>
     public NetworkVariable<Vector4> ControlsSync = new();
 
+    /// <summary>Cabin doors (start open so people can climb in).</summary>
+    public NetworkVariable<bool> DoorLeftOpen = new(true), DoorRightOpen = new(true);
+    public bool DoorOpen(bool left) => left ? DoorLeftOpen.Value : DoorRightOpen.Value;
+
+    /// <summary>Host only.</summary>
+    public void ToggleDoor(bool left)
+    {
+        if (left) DoorLeftOpen.Value = !DoorLeftOpen.Value; else DoorRightOpen.Value = !DoorRightOpen.Value;
+    }
+
     /// <summary>Test mode: the pilot flies a scripted pattern instead of reading devices (used by automated tests).</summary>
     public static bool Autopilot;
 

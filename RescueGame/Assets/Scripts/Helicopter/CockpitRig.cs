@@ -73,7 +73,6 @@ public class CockpitRig : MonoBehaviour
         BuildLights();
         BuildNotesAndDisplays();
         BuildProps();
-        BuildGlass();
     }
 
     Transform Find(string n)

@@ -195,7 +195,8 @@ public class NetworkBootstrap : MonoBehaviour
 
         if (heli != null && heli.IsSpawned)
             GUILayout.Label(heli.IsLocalPilot ? "PILOT - E to get up" : "Walk to the cockpit, E to fly");
-        GUILayout.Label("WASD walk, Space jump, hold click to grab");
+        GUILayout.Label("WASD walk, Shift run, Space jump, click to grab");
+        GUILayout.Label(NetworkPlayer.Local != null && NetworkPlayer.Local.NearDoor ? "F: open / close door" : "F near a door: open / close it");
         GUILayout.Label("Esc frees the mouse, click to look again");
         GUILayout.EndArea();
     }

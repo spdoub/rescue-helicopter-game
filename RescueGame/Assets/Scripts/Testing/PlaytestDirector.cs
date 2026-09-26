@@ -32,6 +32,7 @@ public class PlaytestDirector : MonoBehaviour
     bool record;
     int recFps = 15;
     System.Random rng = new(1);
+    float doorSide = -1f; // which door (heli-local x sign) the bot last pressed F at
 
     float startTime;
     int frame;
@@ -161,6 +162,7 @@ public class PlaytestDirector : MonoBehaviour
     abstract class Step
     {
         public float timeout = 20f;
+        public bool expectTimeout; // running out of time is the point (e.g. walking into a closed door)
         public abstract bool Tick(PlaytestDirector d, float elapsed); // true = done
         public virtual string Name => GetType().Name;
     }
@@ -186,6 +188,16 @@ public class PlaytestDirector : MonoBehaviour
         public Face(float offset) { this.offset = offset; }
         public override string Name => $"turn {offset:F0}";
         public override bool Tick(PlaytestDirector d, float e) { d.Me.BotLook(d.Me.LookYaw + offset, 0f); return true; }
+    }
+
+    class PressDoor : Step
+    {
+        public override string Name => "press F (door)";
+        public override bool Tick(PlaytestDirector d, float e)
+        {
+            d.doorSide = Mathf.Sign(d.Heli.transform.InverseTransformPoint(d.Me.transform.position).x);
+            d.Me.TryToggleNearestDoor(); return true;
+        }
     }
 
     class Jump : Step
@@ -320,6 +332,36 @@ public class PlaytestDirector : MonoBehaviour
                 Add(new Act("wander", 8f, moveZ: 0.5f, turnRate: 60));
                 break;
 
+            case "exitjump": // climb in, then jump out of the doorway several times: must never be knocked down
+                for (int k = 0; k < 3; k++)
+                {
+                    Add(new GoTo("walk to door", door, 0.6f));
+                    Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                    Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                    Add(new Act("settle", 0.5f));
+                    Add(new GoTo("run to the doorway", d => d.Heli.transform.TransformPoint(new Vector3(
+                        Mathf.Sign(d.Heli.transform.InverseTransformPoint(d.Me.transform.position).x) * 0.8f, 1f, 0.6f)), 0.25f, 4f));
+                    Add(new Jump());
+                    Add(new GoTo("leap out", d => d.Heli.transform.TransformPoint(new Vector3(
+                        Mathf.Sign(d.Heli.transform.InverseTransformPoint(d.Me.transform.position).x) * 3.5f, 0f, 0.6f)), 0.4f, 3f));
+                    Add(new Act("land", 1.5f));
+                }
+                break;
+
+            case "door": // close the door from inside, try to walk out (must stay in), open it, walk out
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new PressDoor());
+                Add(new Act("door closing", 1.8f));
+                Add(new Until("door closed", d => System.Array.Exists(FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None), x => !x.IsOpen), 2f));
+                Add(new GoTo("try to walk out (blocked)", d => d.Heli.transform.TransformPoint(new Vector3(d.doorSide * 3f, 1f, 0.6f)), 0.3f, 3f) { expectTimeout = true });
+                Add(new Until("still inside", d => d.Me.OnHelicopter.Value, 1f));
+                Add(new PressDoor());
+                Add(new Act("door opening", 1.8f));
+                Add(new GoTo("walk out", d => d.Heli.transform.TransformPoint(new Vector3(d.doorSide * 3f, 0f, 0.6f)), 0.4f, 5f));
+                break;
+
             case "chaos":
                 Add(new Chaos(duration));
                 break;
@@ -346,7 +388,7 @@ public class PlaytestDirector : MonoBehaviour
         catch (Exception ex) { Report("bot-error", current.Name + ": " + ex.Message); done = true; }
         if (!done && e > current.timeout)
         {
-            if (current is not Chaos) Report("bot-timeout", $"'{current.Name}' did not complete in {current.timeout:F0}s");
+            if (current is not Chaos && !current.expectTimeout) Report("bot-timeout", $"'{current.Name}' did not complete in {current.timeout:F0}s");
             done = true;
         }
         if (done) current = null;

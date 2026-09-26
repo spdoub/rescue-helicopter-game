@@ -39,9 +39,9 @@ public class CrewBody : MonoBehaviour
     [Tooltip("Floor tilt (degrees) that knocks you over if you aren't holding on.")]
     public float knockdownSlope = 40f;
     [Tooltip("Landing faster than this (m/s) knocks you flat.")]
-    public float hardLandingSpeed = 9f;
+    public float hardLandingSpeed = 13f;
     [Tooltip("Falling for longer than this (s) goes full ragdoll mid-air.")]
-    public float longFallTime = 1.1f;
+    public float longFallTime = 2.2f;
     public float knockdownTime = 2f;
     public float getUpTime = 0.4f;
 
@@ -81,7 +81,7 @@ public class CrewBody : MonoBehaviour
     Vector3 groundPoint;
     Vector3 lastPlatformVel;
     bool hadPlatform;
-    float knockdownTimer, getUpTimer;
+    float knockdownTimer, getUpTimer, lurchTime;
     float lastGroundedTime = -10f, lastJumpPressTime = -10f, airTime;
     float lastVerticalSpeed;
 
@@ -223,13 +223,19 @@ public class CrewBody : MonoBehaviour
         }
 
         // Did the floor lurch hard enough to take our legs out?
+        // (Uses the platform's own tilt, not the contact normal: stepping over the rounded edge of
+        // the cabin floor or a door sill must not count as "the floor tipped".)
         if (IsGrounded && GroundBody != null && hadPlatform && !IsHolding)
         {
             Vector3 floorAccel = (PlatformVelocity - lastPlatformVel) / dt;
             floorAccel.y = 0f;
-            float slope = Vector3.Angle(floorNormal, Vector3.up);
-            if (floorAccel.magnitude > knockdownAccel || slope > knockdownSlope)
+            float tilt = Vector3.Angle(GroundBody.transform.up, Vector3.up);
+            if (floorAccel.magnitude > knockdownAccel) lurchTime += dt; else lurchTime = 0f;
+            if (lurchTime > 0.06f || tilt > knockdownSlope)
+            {
                 KnockDown(-floorAccel * 0.05f);
+                lurchTime = 0f;
+            }
         }
         hadPlatform = IsGrounded && GroundBody != null;
         lastPlatformVel = PlatformVelocity;

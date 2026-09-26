@@ -165,20 +165,7 @@ def build():
     ROOF = 2.62
     pads("RearWall", -0.9, 0.9, F, 2.3, -0.52, "PadCream", "Cabin", normal_z=1)
     box("RearWallTrim", (0, 2.31, -0.5), (1.8, 0.05, 0.05), "HullRed", "Cabin")
-    box("RearWallTop", (0, 2.46, -0.52), (1.3, 0.3, 0.05), "PadRed", "Cabin")
     # sloped upper walls above the doors (inward to the roof)
-    for s, n in ((-1, "L"), (1, "R")):
-        box(f"UpperWall_{n}", (s * 0.8, 2.44, 0.47), (0.36, 0.05, 2.0), "PadRed", "Cabin", rot=(0, 0, -s * 58))
-        box(f"DoorHeader_{n}", (s * 0.92, 2.27, 0.52), (0.08, 0.08, 1.8), "HullRed", "Cabin")
-        box(f"DoorPostRear_{n}", (s * 0.92, 1.61, -0.38), (0.09, 1.32, 0.09), "HullRed", "Cabin")
-        box(f"DoorPostFront_{n}", (s * 0.92, 1.61, 1.42), (0.09, 1.32, 0.09), "HullRed", "Cabin")
-        box(f"DoorTrack_{n}", (s * 0.97, 2.33, 0.2), (0.04, 0.05, 2.4), "Metal", "Cabin")
-    box("CabinRoof", (0, ROOF, 0.47), (1.3, 0.04, 2.0), "Grey", "Cabin", bevel=0)
-    for s in (-1, 1):
-        box(f"RoofRail_{s}", (s * 0.34, ROOF - 0.04, 0.47), (0.04, 0.04, 1.95), "Metal", "Cabin", bevel=0.006)
-        for k, z in enumerate((0.0, 0.8)):  # hanging yellow grab handles
-            tube(f"RoofHandle_{s}_{k}", [(s * 0.34, ROOF - 0.05, z), (s * 0.34, ROOF - 0.25, z + 0.02),
-                                         (s * 0.34, ROOF - 0.25, z + 0.18), (s * 0.34, ROOF - 0.05, z + 0.2)], 0.014, "Yellow", "Cabin")
     # grab handles on the door posts (the ones the crew grab)
     for s in (-1, 1):
         for z in (-0.3, 1.34):
@@ -246,20 +233,6 @@ def build():
 
     # ---------------------------------------------------------------- cockpit shell
     CR = 2.3    # cockpit roof
-    box("CockpitRoof", (0, CR, 1.985), (1.5, 0.04, 1.07), "PadRed", "Cockpit", bevel=0.01)
-    for s, n in ((-1, "L"), (1, "R")):
-        pads_x(f"CockpitWall_{n}", 1.5, 2.85, F, 1.38, s * 0.93, "PadRed", "Cockpit", normal_x=-s)
-        box(f"WindowSill_{n}", (s * 0.9, 1.4, 2.15), (0.1, 0.05, 1.35), "HullRed", "Cockpit")
-        box(f"WindowTop_{n}", (s * 0.8, 2.25, 2.0), (0.1, 0.06, 1.0), "HullRed", "Cockpit", rot=(0, 0, -s * 30))
-        box(f"WindowPostRear_{n}", (s * 0.9, 1.87, 1.5), (0.1, 0.95, 0.09), "HullRed", "Cockpit")
-        box(f"WindowPostMid_{n}", (s * 0.9, 1.84, 2.25), (0.06, 0.9, 0.06), "HullRed", "Cockpit", rot=(-8, 0, 0))
-        # A-pillar: from dash corner up to the roof front corner
-        box(f"APillar_{n}", (s * 0.83, 2.01, 2.675), (0.08, 0.66, 0.08), "HullRed", "Cockpit", rot=(-34, 0, 0))
-        box(f"MapPocket_{n}", (s * 0.89, 1.15, 1.9), (0.04, 0.2, 0.35), "DarkGrey", "Cockpit", bevel=0.01)
-        box(f"Map_{n}", (s * 0.875, 1.25, 1.88), (0.01, 0.16, 0.22), "PadCream", "Cockpit", rot=(0, 0, s * 8), bevel=0.002)
-    # windscreen frame: centre divider + top bar
-    box("WindscreenCentre", (0, 2.01, 2.675), (0.06, 0.66, 0.06), "HullRed", "Cockpit", rot=(-34, 0, 0))
-    box("WindscreenTop", (0, 2.28, 2.5), (1.66, 0.06, 0.08), "HullRed", "Cockpit")
 
     # ---------------------------------------------------------------- overhead switch panel
     OY, OZ = 2.23, 2.32

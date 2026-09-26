@@ -4,9 +4,9 @@ Shader "RescueGame/Glass"
 {
     Properties
     {
-        _Tint("Tint", Color) = (0.85, 0.92, 1.0, 0.06)
-        _EdgeColor("Glancing Reflection", Color) = (1.0, 0.85, 0.6, 0.35)
-        _StreakStrength("Streaks", Range(0, 1)) = 0.12
+        _Tint("Tint", Color) = (0.85, 0.92, 1.0, 0.05)
+        _EdgeColor("Glancing Reflection", Color) = (1.0, 0.85, 0.6, 0.12)
+        _StreakStrength("Streaks", Range(0, 1)) = 0.05
     }
     SubShader
     {
@@ -47,8 +47,8 @@ Shader "RescueGame/Glass"
             {
                 float3 viewDir = normalize(GetWorldSpaceViewDir(i.positionWS));
                 half facing = abs(dot(normalize(i.normalWS), viewDir));
-                half fresnel = pow(1.0h - facing, 3.0h);
-                half streak = saturate(sin((i.uv.x + i.uv.y) * 9.0) * 0.5 + 0.5);
+                half fresnel = pow(1.0h - facing, 5.0h);
+                half streak = saturate(sin((i.positionWS.x + i.positionWS.y + i.positionWS.z) * 3.0) * 0.5 + 0.5);
                 streak = pow(streak, 12.0h) * _StreakStrength;
                 half3 col = lerp(_Tint.rgb, _EdgeColor.rgb, fresnel) + streak;
                 half a = saturate(_Tint.a + fresnel * _EdgeColor.a + streak);

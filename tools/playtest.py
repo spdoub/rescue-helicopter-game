@@ -121,6 +121,8 @@ def summarize(base):
 
 
 SUITE = [
+    dict(name="exitjump", scenario="exitjump", duration=45),
+    dict(name="door", scenario="door", duration=35),
     dict(name="walk", scenario="walk", duration=36, window=True),
     dict(name="board_and_fly", scenario="board", pilot="tour", duration=40),
     dict(name="passenger_aggressive", scenario="passenger", client_pilot="aggressive", take_pilot_client=True, duration=40),
