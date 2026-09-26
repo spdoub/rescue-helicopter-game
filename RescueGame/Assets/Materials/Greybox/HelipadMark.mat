@@ -112,12 +112,13 @@ Material:
     - _ShadeSteps: 0
     - _Smoothness: 0.2
     - _SmoothnessTextureChannel: 0
-    - _SnapResolution: 220
+    - _SnapResolution: 360
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
     - _WorkflowMode: 1
+    - _WorldUVScale: 0
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
