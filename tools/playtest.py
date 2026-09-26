@@ -39,7 +39,7 @@ def launch(out, args, window, log):
 
 
 def run(name, scenario=None, pilot=None, client_scenario=None, client_pilot=None, duration=30,
-        record=False, view="side", fps=15, seed=1, take_pilot_client=False, window=False, fire=None, wild=None):
+        record=False, view="side", fps=15, seed=1, take_pilot_client=False, window=False, fire=None, wild=None, host_extra=None):
     kill_games()
     stamp = datetime.now().strftime("%m%d-%H%M%S")
     base = os.path.join(OUT, f"{stamp}_{name}")
@@ -48,6 +48,7 @@ def run(name, scenario=None, pilot=None, client_scenario=None, client_pilot=None
     if pilot: host_args += ["-pilotbot", pilot]
     if fire is not None: host_args += ["-fire", str(fire)]
     if wild is not None: host_args += ["-wild", str(wild)]
+    if host_extra: host_args += host_extra.split()
     if record: host_args += ["-record", "-recfps", str(fps), "-recview", view]
     # A window is needed for recording and for animation measurements (headless mode doesn't animate).
     procs = [launch(os.path.join(base, "host"), host_args, True, "host.log")]
@@ -164,12 +165,13 @@ def main():
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--fire", type=float, help="chance of a roof fire per call (host)")
     r.add_argument("--wild", type=float, help="chance a new call is out on the island (host)")
+    r.add_argument("--host-args", help="extra command-line args for the host game (quoted)")
     sub.add_parser("suite")
     a = ap.parse_args()
 
     if a.cmd == "run":
         base = run(a.scenario + ("_rec" if a.record else "_win" if a.window else ""), a.scenario, a.pilot, a.client_scenario,
-                   a.client_pilot, a.duration, a.record, a.view, a.fps, a.seed, a.client_takes_pilot, a.window, a.fire, a.wild)
+                   a.client_pilot, a.duration, a.record, a.view, a.fps, a.seed, a.client_takes_pilot, a.window, a.fire, a.wild, a.host_args)
         print(base)
         print(summarize(base))
     else:
