@@ -95,6 +95,14 @@ public static class WinchBuilder
         dust.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Effects/SoftPuff.png")); // soft round puffs, not squares
         EditorUtility.SetDirty(dust);
         lights.beamMaterial = beam; lights.dustMaterial = dust;
+
+        // damage: sounds + a smoke material (soft puffs, tinted per particle)
+        var dmg = heli.GetComponent<HeliDamage>() ?? heli.AddComponent<HeliDamage>();
+        var smoke = AssetDatabase.LoadAssetAtPath<Material>(dir + "M_Smoke.mat");
+        if (smoke == null) { smoke = new Material(dust); smoke.SetColor("_BaseColor", Color.white); AssetDatabase.CreateAsset(smoke, dir + "M_Smoke.mat"); }
+        dmg.smokeMaterial = smoke;
+        dmg.crash = C("crash_thud"); dmg.rotorStrike = C("rotor_strike"); dmg.alarm = C("damage_alarm");
+        EditorUtility.SetDirty(dmg);
         EditorUtility.SetDirty(lights);
         Debug.Log("[Audio] helicopter sounds wired: " + (a.rotorLoop && a.winchMotor && a.doorSlide && a.hookClank && a.deliveredJingle));
     }

@@ -6109,6 +6109,7 @@ GameObject:
   - component: {fileID: 1229749793}
   - component: {fileID: 1229749794}
   - component: {fileID: 1229749795}
+  - component: {fileID: 1229749796}
   m_Layer: 0
   m_Name: Helicopter
   m_TagString: Untagged
@@ -6145,6 +6146,7 @@ MonoBehaviour:
   rotorSpinSpeed: 1500
   engineOn: 1
   power: 1
+  damagePower: 1
   useLocalInput: 1
   simulate: 1
 --- !u!54 &1229749786
@@ -6413,6 +6415,33 @@ MonoBehaviour:
   beamMaterial: {fileID: 2100000, guid: a580c300df5eb4553922e1a7f38c5644, type: 2}
   dustMaterial: {fileID: 2100000, guid: e9fdfb8af1ce045b898a62ffda90713f, type: 2}
   LightOn:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
+--- !u!114 &1229749796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22bd30d9fd00a4d769f911a392b0b709, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeliDamage
+  ShowTopMostFoldoutHeaderGroup: 1
+  crashSpeed: 4
+  damagePerSpeed: 0.045
+  rotorStrikeDamage: 0.35
+  rotorRadius: 5.2
+  repairSeconds: 25
+  crash: {fileID: 8300000, guid: 8f2b2effa68aa46ab95ae9524b9454fd, type: 3}
+  rotorStrike: {fileID: 8300000, guid: ca4d620e6dfb44cc69db984d653cccc6, type: 3}
+  alarm: {fileID: 8300000, guid: a0a8c794a651149b08669cffaef59fa5, type: 3}
+  smokeMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
+  Health:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0

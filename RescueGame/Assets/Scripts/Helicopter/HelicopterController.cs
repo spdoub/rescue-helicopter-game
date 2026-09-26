@@ -51,6 +51,8 @@ public class HelicopterController : MonoBehaviour
     [Header("Engine power")]
     [Tooltip("1 = full power. Out of fuel drops this so the helicopter sinks (see HeliFuel).")]
     [Range(0f, 1f)] public float power = 1f;
+    [Tooltip("Engine damage multiplier (see HeliDamage).")]
+    [Range(0f, 1f)] public float damagePower = 1f;
 
     [Header("Networking")]
     [Tooltip("Read the keyboard/gamepad on this machine. Turned off when NetworkHelicopter feeds input from the pilot.")]
@@ -136,7 +138,8 @@ public class HelicopterController : MonoBehaviour
         }
         else holding = false;
         // Losing power: can't climb, and the best it can do is a slow sinking glide.
-        if (power < 1f) targetClimb = Mathf.Min(targetClimb * power, -3.5f * (1f - power));
+        float p = power * damagePower;
+        if (p < 1f) targetClimb = Mathf.Min(targetClimb * p, -3.5f * (1f - p));
         float verticalAccel = -Physics.gravity.y + (targetClimb - rb.linearVelocity.y) * verticalResponse;
 
         float liftAccel = verticalAccel / Mathf.Max(upDot, 0.5f);

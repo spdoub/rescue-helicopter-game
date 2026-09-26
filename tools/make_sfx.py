@@ -18,6 +18,9 @@ SFX = {
     "dog_bark_1": ("Small scruffy terrier dog, two excited high yappy barks, close up, no background noise", 1.2, False),
     "dog_bark_2": ("Small terrier dog, one happy bark then a little growly play bark, close up", 1.2, False),
     "dog_whine": ("Small dog whining and whimpering impatiently, short, close up", 1.5, False),
+    "crash_thud": ("Helicopter hull slamming into a brick wall, heavy metal crunch and thud, short", 1.2, False),
+    "rotor_strike": ("Helicopter rotor blades striking concrete, violent clattering metal chopping sparks, short", 1.2, False),
+    "damage_alarm": ("Cockpit warning alarm, urgent repeating electronic beep beep beep, constant", 2.0, True),
     "delivered_jingle": ("Short cheerful cartoon success jingle, bouncy brass and xylophone, cash register ding at the end", 2.5, False),
 }
 

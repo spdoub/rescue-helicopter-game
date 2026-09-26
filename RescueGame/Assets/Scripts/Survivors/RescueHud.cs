@@ -11,7 +11,7 @@ public class RescueHud : MonoBehaviour
     static void Create() => DontDestroyOnLoad(new GameObject("RescueHud").AddComponent<RescueHud>());
 
     GUIStyle bubble, banner, money, title, objective, fuelStyle, marker;
-    NetworkHelicopter heli; HeliFuel fuel;
+    NetworkHelicopter heli; HeliFuel fuel; HeliDamage damage;
     string lastReport = "";
     float reportShownAt = -100f;
     const float ReportSeconds = 9f;
@@ -55,7 +55,8 @@ public class RescueHud : MonoBehaviour
 
     void MissionPanel(Camera cam)
     {
-        if (heli == null) { heli = FindAnyObjectByType<NetworkHelicopter>(); if (heli) fuel = heli.GetComponent<HeliFuel>(); }
+        if (Event.current.type == EventType.Layout || Event.current.type == EventType.Repaint) placed.Clear();
+        if (heli == null) { heli = FindAnyObjectByType<NetworkHelicopter>(); if (heli) { fuel = heli.GetComponent<HeliFuel>(); damage = heli.GetComponent<HeliDamage>(); } }
         var all = FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.InstanceID);
         Outlined(new Rect(24, 18, 600, 44), "CO-OP RESCUE", title);
         if (fuel != null && fuel.IsSpawned)
@@ -68,6 +69,14 @@ public class RescueHud : MonoBehaviour
         }
 
         float y = 94f; bool anyoneAboard = false;
+        if (damage != null && damage.IsSpawned && damage.Health.Value < 0.999f)
+        {
+            float h = damage.Health.Value;
+            fuelStyle.normal.textColor = h < 0.3f && Mathf.Repeat(Time.time, 0.6f) < 0.3f ? new Color(1f, 0.35f, 0.25f) : h < 0.6f ? new Color(1f, 0.75f, 0.4f) : Color.white;
+            string state = h <= 0f ? "  ENGINE FAILING - LAND IT" : h < 0.3f ? "  (land on the home pad to repair)" : "";
+            Outlined(new Rect(26, 92, 620, 32), $"HULL: {Mathf.RoundToInt(h * 100f)}%{state}", fuelStyle);
+            y += 30f;
+        }
         foreach (var s in all)
         {
             if (!s.IsSpawned) continue;
@@ -116,9 +125,15 @@ public class RescueHud : MonoBehaviour
         float x = Mathf.Clamp(sp.x, m, Screen.width - m), yy = Mathf.Clamp(Screen.height - sp.y, m, Screen.height - m);
         if (behind) yy = Screen.height - m;
         string icon = off ? (x <= m ? "◀" : x >= Screen.width - m ? "▶" : yy <= m ? "▲" : "▼") : "▼";
-        Outlined(new Rect(x - 100, yy - 44, 200, 24), $"{label}  {dist:0} m", marker);
-        Outlined(new Rect(x - 20, yy - 22, 40, 28), icon, marker);
+        // Several markers bunched up at the same edge: stack them instead of printing on top of each other.
+        var box = new Rect(x - 100, yy - 44, 200, 46);
+        for (int tries = 0; tries < 8 && placed.Exists(r => r.Overlaps(box)); tries++)
+            box.y += yy > Screen.height * 0.5f ? -46f : 46f;
+        placed.Add(box);
+        Outlined(new Rect(box.x, box.y, 200, 24), $"{label}  {dist:0} m", marker);
+        Outlined(new Rect(box.x + 80, box.y + 22, 40, 28), icon, marker);
     }
+    readonly System.Collections.Generic.List<Rect> placed = new();
 
     void OnGUI()
     {

@@ -107,7 +107,7 @@ public class PlaytestDirector : MonoBehaviour
         telemetry = new StreamWriter(Path.Combine(outDir, "telemetry.csv"));
         telemetry.WriteLine("t,unixms,role,heliX,heliY,heliZ,heliPitch,heliYaw,heliRoll,heliSpin,pilot," +
                             "px,py,pz,grounded,knocked,seated,onheli,camX,camY,camZ,lfX,lfY,lfZ,rfX,rfY,rfZ,speed," +
-                            "winchLen,winchMotion,hookX,hookY,hookZ,survState,sX,sY,sZ,nearWinch");
+                            "winchLen,winchMotion,hookX,hookY,hookZ,survState,sX,sY,sZ,nearWinch,hull");
         startTime = Time.time;
         BuildScenario();
     }
@@ -438,7 +438,7 @@ public class PlaytestDirector : MonoBehaviour
                 Add(new GoTo("walk to door", door, 0.6f));
                 Add(new GoTo("climb in", cabin, 0.35f, 8f));
                 Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
-                Add(new GoTo("to the pilot seat", d => d.Heli.pilotSeat.position, 0.6f, 8f));
+                Add(new GoTo("to the pilot seat", d => d.Heli.pilotSeat.position, 0.6f, 8f) { expectTimeout = true });
                 Add(new Lambda("sit down (E)", d => d.Me.BotToggleSeat()));
                 Add(new Until("seated", d => d.Me.SeatedAsPilot.Value, 3f));
                 Add(new Lambda("pilot: climb", d => NetworkHelicopter.BotPilot = t => new HelicopterInput { collective = t < 3.5f ? 1f : 0f }));
@@ -453,6 +453,20 @@ public class PlaytestDirector : MonoBehaviour
                     Debug.Log($"[Playtest] solo hover: drift {drift:F1} m, height change {-sink:F1} m in 20 s");
                     if (drift > 6f || sink > 3f) d.Report("unpiloted-drift", $"drifted {drift:F1} m, sank {sink:F1} m in 20 s");
                 }));
+                break;
+            }
+
+            case "crash": // fly flat out into the city until something gets hit; the hull must take damage (and recover on the pad)
+            {
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("to the pilot seat", d => d.Heli.pilotSeat.position, 0.6f, 8f) { expectTimeout = true });
+                Add(new Lambda("sit down (E)", d => d.Me.BotToggleSeat()));
+                Add(new Until("seated", d => d.Me.SeatedAsPilot.Value, 3f));
+                Add(new Lambda("pilot: up a bit, then full speed ahead", d => NetworkHelicopter.BotPilot = t => new HelicopterInput { collective = t < 1.5f ? 1f : 0f, pitch = t > 2f ? 1f : 0f }));
+                Add(new Until("hit something", d => d.Heli.GetComponent<HeliDamage>().Health.Value < 0.95f, 40f));
+                Add(new Lambda("report damage", d => Debug.Log($"[Playtest] crash: hull {d.Heli.GetComponent<HeliDamage>().Health.Value:P0} after impact")));
                 break;
             }
 
@@ -745,6 +759,8 @@ public class PlaytestDirector : MonoBehaviour
         }
         else sb.Append(",,,,");
         sb.Append(',').Append(me != null && me.NearWinch ? 1 : 0);
+        var dmg = h != null ? h.GetComponent<HeliDamage>() : null;
+        sb.Append(',').Append(dmg != null && dmg.IsSpawned ? C(dmg.Health.Value) : "");
         telemetry.WriteLine(sb.ToString());
     }
 
