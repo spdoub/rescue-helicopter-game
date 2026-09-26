@@ -910,10 +910,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CrewVisual
   armSwing: 5.5
   armSpring: 30
-  armDamping: 4
+  armDamping: 7
   headWobble: 2.2
   turnSpeed: 9
-  leanPerAccel: 1.6
+  leanPerAccel: 1
+  leanStiffness: 40
   maxLean: 16
   maxLegTurn: 60
   reachBlendSpeed: 7

@@ -22,14 +22,16 @@ public class CrewVisual : MonoBehaviour
     [Header("Floppiness")]
     public float armSwing = 5.5f;       // how much arms react to acceleration
     public float armSpring = 30f;
-    public float armDamping = 4f;       // lower = more overshoot and wobble
+    public float armDamping = 7f;       // lower = more overshoot and wobble
     public float headWobble = 2.2f;
 
     [Header("Body")]
     [Tooltip("How quickly the body turns to face where you look (lower = lazier).")]
     public float turnSpeed = 9f;
     [Tooltip("Degrees of lean per m/s² of acceleration (leans into starts, stops and turns).")]
-    public float leanPerAccel = 1.6f;
+    public float leanPerAccel = 1.0f;
+    [Tooltip("How quickly the lean follows (higher = snappier).")]
+    public float leanStiffness = 40f;
     public float maxLean = 16f;
     [Tooltip("Legs turn toward sideways/diagonal movement by up to this much.")]
     public float maxLegTurn = 60f;
@@ -148,10 +150,11 @@ public class CrewVisual : MonoBehaviour
         bodyYaw = player.SeatedAsPilot.Value ? rootYaw : Mathf.LerpAngle(bodyYaw, rootYaw, 1f - Mathf.Exp(-turnSpeed * dt));
         if (Mathf.Abs(Mathf.DeltaAngle(bodyYaw, rootYaw)) > 100f) bodyYaw = rootYaw;
 
-        // Lean into speeding up / stopping / turning (a springy wobble, so it overshoots a bit).
+        // Lean into speeding up / stopping / turning.
         Vector3 accel = Vector3.ClampMagnitude(new Vector3(lastAccel.x, 0f, lastAccel.z), 25f);
         Vector3 leanTarget = player.Grounded.Value && !player.SeatedAsPilot.Value ? accel * leanPerAccel : Vector3.zero;
-        leanVel += ((leanTarget - lean) * 60f - leanVel * 9f) * dt;
+        // Critically damped: leans in once and settles, no rocking back and forth.
+        leanVel += ((leanTarget - lean) * leanStiffness - leanVel * 2f * Mathf.Sqrt(leanStiffness)) * dt;
         lean += leanVel * dt;
         lean = Vector3.ClampMagnitude(lean, maxLean);
         Vector3 leanAxis = Vector3.Cross(Vector3.up, lean);   // tip toward the acceleration
