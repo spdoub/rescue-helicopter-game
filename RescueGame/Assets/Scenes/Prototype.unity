@@ -853,6 +853,9 @@ MonoBehaviour:
   mouseSensitivity: 0.12
   maxYaw: 150
   maxPitch: 80
+  eyeForward: 0.3
+  frontDistance: 2.4
+  frontHeight: 0.35
   chaseDistance: 20
   chaseHeight: 7
 --- !u!1 &168465546

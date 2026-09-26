@@ -34,7 +34,9 @@ public class CrewVisual : MonoBehaviour
     public float leanStiffness = 40f;
     public float maxLean = 16f;
     [Tooltip("Legs turn toward sideways/diagonal movement by up to this much.")]
-    public float maxLegTurn = 60f;
+    public float maxLegTurn = 90f;
+    [Tooltip("Ground speed (m/s) the run animation's feet cover at normal playback. Faster movement speeds it up so feet don't slide.")]
+    public float runAnimSpeed = 4.7f;
 
     [Header("Hands")]
     [Tooltip("How fast arms raise/lower when you start/stop reaching.")]
@@ -141,7 +143,8 @@ public class CrewVisual : MonoBehaviour
         legTurn = Mathf.LerpAngle(legTurn, targetLegTurn, 1f - Mathf.Exp(-8f * dt));
 
         anim.SetFloat(SpeedId, speed, 0.15f, dt);
-        anim.SetFloat(DirectionId, direction, 0.1f, dt);
+        // Playback rate: backwards plays in reverse; faster than the run animation's own pace speeds it up.
+        anim.SetFloat(DirectionId, direction * Mathf.Max(1f, speed / runAnimSpeed), 0.1f, dt);
         anim.SetBool(GroundedId, player.Grounded.Value || player.SeatedAsPilot.Value);
         anim.SetBool(SeatedId, player.SeatedAsPilot.Value);
 

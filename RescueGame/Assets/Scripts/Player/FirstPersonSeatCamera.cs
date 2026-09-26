@@ -24,6 +24,10 @@ public class FirstPersonSeatCamera : MonoBehaviour
     public float maxYaw = 150f;
     public float maxPitch = 80f;
 
+    [Header("First person")]
+    [Tooltip("How far in front of the body's centre line your eyes sit.")]
+    public float eyeForward = 0.2f;
+
     [Header("Front view (V)")]
     public float frontDistance = 2.4f;
     public float frontHeight = 0.35f;
@@ -36,7 +40,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
     public static View ForcedView = (View)(-1); // test screenshots only
     View view = View.FirstPerson;
     float yaw, pitch;
-    Vector3 bobOffset;
+    float bobHeight;
     NetworkHelicopter netHeli;
     Camera cam;
 
@@ -118,16 +122,19 @@ public class FirstPersonSeatCamera : MonoBehaviour
                 // Knocked flat: ride along with the floppy ragdoll's head.
                 // Eyes ride on the animated head (so the body stays lined up underneath you);
                 // the model detaches from the body while ragdolled.
-                // Head bob is smoothed relative to the body so it feels loose, not jittery.
+                // Position comes from the steady body (so leaning into stops doesn't rock the
+                // view), just ahead of the face; only the up-and-down walking bob comes from the
+                // animated head, smoothed.
                 var visual = me.Visual;
                 Vector3 steady = me.GetComponent<CrewBody>().Eye;
-                Vector3 eyePos = visual != null ? visual.EyePosition : steady;
                 if (visual != null && visual.Ragdolled)
-                    transform.position = Vector3.Lerp(transform.position, eyePos, 0.35f);
+                    transform.position = Vector3.Lerp(transform.position, visual.EyePosition, 0.35f);
                 else
                 {
-                    bobOffset = Vector3.Lerp(bobOffset, eyePos - steady, 1f - Mathf.Exp(-12f * Time.deltaTime));
-                    transform.position = steady + bobOffset;
+                    Vector3 facing = Quaternion.Euler(0f, me.LookYaw, 0f) * Vector3.forward;
+                    float bob = visual != null ? visual.EyePosition.y - steady.y : 0f;
+                    bobHeight = Mathf.Lerp(bobHeight, bob, 1f - Mathf.Exp(-10f * Time.deltaTime));
+                    transform.position = steady + facing * eyeForward + Vector3.up * bobHeight;
                 }
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }

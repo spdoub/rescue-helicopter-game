@@ -916,7 +916,8 @@ MonoBehaviour:
   leanPerAccel: 1
   leanStiffness: 40
   maxLean: 16
-  maxLegTurn: 60
+  maxLegTurn: 90
+  runAnimSpeed: 4.7
   reachBlendSpeed: 7
   handFollowSpeed: 12
   handWobble: 0.03
