@@ -46,6 +46,7 @@ public class PlaytestDirector : MonoBehaviour
     readonly Queue<Step> steps = new();
     Step current;
     float stepStart;
+    float StepTime => Time.time - stepStart;
 
     // check state
     float heliSpinTime, stuckTime, spawnedAt = -1f;
@@ -105,7 +106,8 @@ public class PlaytestDirector : MonoBehaviour
 
         telemetry = new StreamWriter(Path.Combine(outDir, "telemetry.csv"));
         telemetry.WriteLine("t,unixms,role,heliX,heliY,heliZ,heliPitch,heliYaw,heliRoll,heliSpin,pilot," +
-                            "px,py,pz,grounded,knocked,seated,onheli,camX,camY,camZ,lfX,lfY,lfZ,rfX,rfY,rfZ,speed");
+                            "px,py,pz,grounded,knocked,seated,onheli,camX,camY,camZ,lfX,lfY,lfZ,rfX,rfY,rfZ,speed," +
+                            "winchLen,winchMotion,hookX,hookY,hookZ,survState,sX,sY,sZ,nearWinch");
         startTime = Time.time;
         BuildScenario();
     }
@@ -170,8 +172,8 @@ public class PlaytestDirector : MonoBehaviour
     class Act : Step
     {
         readonly float secs; readonly PlayerInput input; readonly float turnRate, pitch; readonly string label;
-        public Act(string label, float secs, float moveX = 0, float moveZ = 0, bool sprint = false, float turnRate = 0, float pitch = float.NaN, bool grabL = false, bool grabR = false)
-        { this.label = label; this.secs = secs; input = new PlayerInput { moveX = moveX, moveZ = moveZ, sprint = sprint, grabLeft = grabL, grabRight = grabR }; this.turnRate = turnRate; this.pitch = pitch; }
+        public Act(string label, float secs, float moveX = 0, float moveZ = 0, bool sprint = false, float turnRate = 0, float pitch = float.NaN, bool grabL = false, bool grabR = false, sbyte winch = 0)
+        { this.label = label; this.secs = secs; input = new PlayerInput { moveX = moveX, moveZ = moveZ, sprint = sprint, grabLeft = grabL, grabRight = grabR, winch = winch }; this.turnRate = turnRate; this.pitch = pitch; }
         public override string Name => label;
         public override bool Tick(PlaytestDirector d, float e)
         {
@@ -197,6 +199,26 @@ public class PlaytestDirector : MonoBehaviour
         {
             d.doorSide = Mathf.Sign(d.Heli.transform.InverseTransformPoint(d.Me.transform.position).x);
             d.Me.TryToggleNearestDoor(); return true;
+        }
+    }
+
+    /// <summary>At the winch box: hold on to it with the left hand (like a real operator in a moving
+    /// helicopter) and hold the winch key (+1 in, -1 out, 0 just wait) until a condition is met.</summary>
+    class WinchUntil : Step
+    {
+        readonly string label; readonly sbyte dir; readonly Func<PlaytestDirector, bool> cond;
+        public WinchUntil(string label, sbyte dir, Func<PlaytestDirector, bool> cond, float timeout) { this.label = label; this.dir = dir; this.cond = cond; this.timeout = timeout; }
+        public override string Name => label;
+        public override bool Tick(PlaytestDirector d, float e)
+        {
+            var w = d.Heli.GetComponent<NetworkWinch>();
+            Vector3 to = w.ControlPoint - d.Me.GetComponent<CrewBody>().Eye;
+            Vector3 flat = new Vector3(to.x, 0f, to.z);
+            if (flat.sqrMagnitude > 0.0001f)
+                d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
+            bool done = cond(d);
+            NetworkPlayer.BotOverride = new PlayerInput { winch = done ? (sbyte)0 : dir, grabLeft = true };
+            return done;
         }
     }
 
@@ -322,6 +344,47 @@ public class PlaytestDirector : MonoBehaviour
                 Add(new Act("falling", 5f));
                 break;
 
+            case "winch": // board, go to the winch box, let the hook down, reel it back up
+            {
+                NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("to the winch box", d => d.Heli.transform.TransformPoint(new Vector3(0.45f, 1f, 1.0f)), 0.25f, 6f));
+                Add(new Until("at the winch box", d => d.Me.NearWinch, 2f));
+                Add(new Act("hold Q: let the hook down", 4f, winch: -1));
+                Add(new Until("cable out 5 m", d => W(d).Length.Value > 5f, 1f));
+                Add(new Act("hold R: reel in", 4.5f, winch: 1));
+                Add(new Until("hook back up", d => W(d).Length.Value < 0.5f, 2f));
+                Add(new Until("hook stowed at the hoist", d => Vector3.Distance(W(d).HookEyePosition, W(d).TipPosition) < 0.6f, 3f));
+                break;
+            }
+
+            case "rescue_crew": // winch operator for a full rescue (someone else flies with the "rescue" pilot bot)
+            {
+                NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
+                SurvivorBrain G() => FindAnyObjectByType<SurvivorBrain>();
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("to the winch box", d => d.Heli.transform.TransformPoint(new Vector3(0.45f, 1f, 1.0f)), 0.25f, 6f));
+                Add(new Until("at the winch box", d => d.Me.NearWinch, 2f));
+                Add(new WinchUntil("over the survivor", 0, d =>
+                {
+                    var g = G(); if (g == null) return false;
+                    Vector3 tip = W(d).TipPosition, gp = g.transform.position; tip.y = gp.y = 0f;
+                    return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f;
+                }, 60f));
+                Add(new WinchUntil("let the hook down to her", -1, d => W(d).HookEyePosition.y < G().transform.position.y + 0.6f || G().Current != SurvivorBrain.State.Waiting, 20f));
+                Add(new WinchUntil("she grabs the hook", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
+                Add(new WinchUntil("let her get a grip", 0, d => d.StepTime > 1.5f, 3f));
+                Add(new WinchUntil("reel her up", 1, d => G().Current == SurvivorBrain.State.Boarding || G().Current == SurvivorBrain.State.Seated, 30f));
+                Add(new WinchUntil("she's strapped in", 0, d => G().Current == SurvivorBrain.State.Seated, 20f));
+                Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 120f));
+                Add(new Until("payout", d => RescueZone.All.Count > 0 && RescueZone.All[0].Rescued.Value > 0, 20f));
+                break;
+            }
+
             case "passenger": // stand in the cabin (holding on half the time) while someone flies hard
                 Add(new GoTo("walk to door", door, 0.6f));
                 Add(new GoTo("climb in", cabin, 0.35f, 8f));
@@ -420,6 +483,7 @@ public class PlaytestDirector : MonoBehaviour
             return i;
         },
         "takeoff-later" => t => new HelicopterInput { collective = t > 6f && t < 9f ? 1f : 0f },
+        "rescue" => new RescuePilot().Tick,
         _ => t => default,
     };
 
@@ -462,7 +526,9 @@ public class PlaytestDirector : MonoBehaviour
             Vector3 chest = vis.BonePosition(HumanBodyBones.Chest), hips = vis.BonePosition(HumanBodyBones.Hips);
             float d = DistanceToSegment(c, hips, chest);
             if (d < 0.2f) Report("camera-inside-body", $"camera {d:F2} m from own spine (look pitch {me.LookPitch:F0})");
-            foreach (var col in Physics.OverlapSphere(c, 0.04f, gameplay, QueryTriggerInteraction.Ignore))
+            // (riding: compare against the helicopter's walls where they are for physics, like the camera does)
+            Vector3 cp = me.OnHelicopter.Value && Heli ? FirstPersonSeatCamera.RenderToPhysics(Heli.transform).MultiplyPoint3x4(c) : c;
+            foreach (var col in Physics.OverlapSphere(cp, 0.04f, gameplay, QueryTriggerInteraction.Ignore))
                 Report("camera-in-scenery", col.name);
         }
 
@@ -548,6 +614,24 @@ public class PlaytestDirector : MonoBehaviour
               .Append(',').Append(C(rf.x)).Append(',').Append(C(rf.y)).Append(',').Append(C(rf.z))
               .Append(',').Append(C(me.MoveSpeed.Value));
         }
+        else sb.Append(",,,,,,,,,,,,,,,,,");
+        // winch + survivor
+        var w = h != null ? h.GetComponent<NetworkWinch>() : null;
+        if (w != null && w.IsSpawned && w.hook != null)
+        {
+            var hk = w.hook.position;
+            sb.Append(',').Append(C(w.Length.Value)).Append(',').Append(w.Motion.Value)
+              .Append(',').Append(C(hk.x)).Append(',').Append(C(hk.y)).Append(',').Append(C(hk.z));
+        }
+        else sb.Append(",,,,,");
+        var sv = FindAnyObjectByType<SurvivorBrain>();
+        if (sv != null && sv.IsSpawned)
+        {
+            var sp = sv.transform.position;
+            sb.Append(',').Append(sv.Current).Append(',').Append(C(sp.x)).Append(',').Append(C(sp.y)).Append(',').Append(C(sp.z));
+        }
+        else sb.Append(",,,,");
+        sb.Append(',').Append(me != null && me.NearWinch ? 1 : 0);
         telemetry.WriteLine(sb.ToString());
     }
 

@@ -241,6 +241,26 @@ public class CrewBody : MonoBehaviour
         lastPlatformVel = PlatformVelocity;
     }
 
+    /// <summary>Pull in both hands' holds toward 'target' length (hauling yourself in along a rope,
+    /// with no extra lift: only the rope's own pull).</summary>
+    public void ShortenGrip(float target, float speed, float dt)
+    {
+        foreach (var hand in new[] { Left, Right })
+        {
+            if (!hand.Holding || hand.rope <= target) continue;
+            hand.rope = Mathf.Max(target, hand.rope - speed * dt);
+            hand.joint.linearLimit = new SoftJointLimit { limit = hand.rope };
+        }
+    }
+
+    /// <summary>Throw the body (scripted moves like a survivor's leap into the cabin).</summary>
+    public void Launch(Vector3 velocity)
+    {
+        if (Seated) return;
+        rb.linearVelocity = velocity;
+        IsGrounded = false;
+    }
+
     /// <summary>Lose balance and ragdoll-tumble for a bit.</summary>
     public void KnockDown(Vector3 shove)
     {

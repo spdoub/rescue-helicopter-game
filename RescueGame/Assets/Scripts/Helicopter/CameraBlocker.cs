@@ -31,7 +31,11 @@ public class CameraBlocker : MonoBehaviour
     void Follow()
     {
         if (follower == null) return;
-        follower.SetPositionAndRotation(transform.position, transform.rotation);
+        // Sit where the helicopter's own colliders are for physics (not the smoothed drawn pose),
+        // matching how the camera does its wall check while riding.
+        var heli = GetComponentInParent<Rigidbody>();
+        Matrix4x4 m = (heli ? FirstPersonSeatCamera.RenderToPhysics(heli.transform) : Matrix4x4.identity) * transform.localToWorldMatrix;
+        follower.SetPositionAndRotation(m.GetColumn(3), m.rotation);
         follower.localScale = transform.lossyScale;
         Physics.SyncTransforms();
     }

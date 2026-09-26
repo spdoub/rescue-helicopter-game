@@ -9,7 +9,8 @@ using UnityEngine.InputSystem;
 /// - Everywhere: publishes what CrewVisual needs to animate the body (look, hands, speed, airborne).
 ///
 /// Controls: WASD walk, Shift run, Space jump, mouse look, hold left/right click to reach and grab
-/// with that hand (hold W while holding on to climb), E to sit in / leave the pilot seat.
+/// with that hand (hold W while holding on to climb), E to sit in / leave the pilot seat,
+/// F to open/close the nearest cabin door, and at the winch box hold R / Q to reel the hoist in / out.
 /// </summary>
 [RequireComponent(typeof(CrewBody))]
 public class NetworkPlayer : NetworkBehaviour
@@ -25,6 +26,15 @@ public class NetworkPlayer : NetworkBehaviour
     public CrewVisual Visual { get; set; }
 
     public NetworkVariable<bool> SeatedAsPilot = new();
+    /// <summary>Strapped into a cabin seat as a passenger (rescued survivors).</summary>
+    public NetworkVariable<bool> SeatedPassenger = new();
+    public bool IsSeated => SeatedAsPilot.Value || SeatedPassenger.Value;
+
+    /// <summary>Computer-controlled (a survivor): no keyboard, no camera, the brain supplies the controls.</summary>
+    public bool IsNpc => brain != null;
+    /// <summary>This machine's own human-controlled crew member?</summary>
+    public bool IsLocalPlayer => IsOwner && !IsNpc;
+    SurvivorBrain brain;
     public NetworkVariable<bool> OnHelicopter = new();
     public NetworkVariable<bool> KnockedDown = new();
     public NetworkVariable<bool> Grounded = new(true);
@@ -45,6 +55,7 @@ public class NetworkPlayer : NetworkBehaviour
 
     CrewBody body;
     NetworkHelicopter heli;
+    NetworkWinch winch;
     bool jumpQueued;
     float lastHeliYaw;
     PlayerInput latestInput;          // host: most recent controls from the owner
@@ -69,21 +80,23 @@ public class NetworkPlayer : NetworkBehaviour
     void Awake()
     {
         body = GetComponent<CrewBody>();
+        brain = GetComponent<SurvivorBrain>();
     }
 
     public override void OnNetworkSpawn()
     {
         heli = FindAnyObjectByType<NetworkHelicopter>();
+        winch = heli ? heli.GetComponent<NetworkWinch>() : null;
         GetComponent<Rigidbody>().isKinematic = !IsServer;
 
-        if (IsOwner)
+        if (IsLocalPlayer)
         {
             Local = this;
             LookYaw = heli ? heli.transform.eulerAngles.y : 0f;
             lastHeliYaw = LookYaw;
         }
 
-        if (IsServer && heli != null)
+        if (IsServer && heli != null && !IsNpc)
         {
             // Start outside on the ground, facing the helicopter's side door.
             Vector3 feet = FindSpawnSpot();
@@ -134,7 +147,7 @@ public class NetworkPlayer : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner) return;
+        if (!IsLocalPlayer) return;
 
         var kb = Keyboard.current;
         var mouse = Mouse.current;
@@ -171,7 +184,8 @@ public class NetworkPlayer : NetworkBehaviour
     {
         if (!IsSpawned) return;
 
-        if (IsOwner)
+        if (IsServer && IsNpc) ReceiveInput(brain.Think());
+        else if (IsOwner)
         {
             var input = ReadInput();
             if (IsServer) ReceiveInput(input);
@@ -198,6 +212,8 @@ public class NetworkPlayer : NetworkBehaviour
         if (kb != null) i.sprint = kb.leftShiftKey.isPressed && !SeatedAsPilot.Value;
         var mouse = Mouse.current;
         bool free = looking && mouse != null && !SeatedAsPilot.Value;
+        if (kb != null && NearWinch && !SeatedAsPilot.Value)
+            i.winch = (sbyte)((kb.rKey.isPressed ? 1 : 0) - (kb.qKey.isPressed ? 1 : 0));
         i.grabLeft = free && mouse.leftButton.isPressed;
         i.grabRight = free && mouse.rightButton.isPressed;
         if (HoldGrabForTests) { i.grabLeft = i.grabRight = true; i.pitch = 60f; }
@@ -207,7 +223,7 @@ public class NetworkPlayer : NetworkBehaviour
         {
             var b = BotOverride.Value;
             i.moveX = b.moveX; i.moveZ = b.moveZ; i.sprint = b.sprint;
-            i.grabLeft = b.grabLeft; i.grabRight = b.grabRight;
+            i.grabLeft = b.grabLeft; i.grabRight = b.grabRight; i.winch = b.winch;
             LocalReachLeft = i.grabLeft; LocalReachRight = i.grabRight;
         }
         if (BotJumps > 0) { BotJumps--; i.jump = true; }
@@ -233,11 +249,17 @@ public class NetworkPlayer : NetworkBehaviour
             body.FollowSeat(heli.pilotSeat);
             return;
         }
+        if (SeatedPassenger.Value && passengerSeat != null)
+        {
+            body.FollowSeat(passengerSeat);
+            return;
+        }
 
         var input = Time.time - lastInputTime < InputTimeout ? latestInput : new PlayerInput { yaw = transform.eulerAngles.y };
         input.jump = pendingJump;
         pendingJump = false;
         body.Simulate(input, Time.fixedDeltaTime);
+        if (input.winch != 0 && winch != null && !body.IsKnockedDown && winch.InReach(body.Eye)) winch.Operate(input.winch);
 
         bool onHeli = heli != null && body.GroundBody != null && body.GroundBody.gameObject == heli.gameObject;
         Set(OnHelicopter, onHeli);
@@ -264,6 +286,25 @@ public class NetworkPlayer : NetworkBehaviour
         if (v.Value != value) v.Value = value;
     }
 
+    Transform passengerSeat;
+
+    /// <summary>Host: strap into a cabin seat (null = get up and stand at 'standAt').</summary>
+    public void SetPassengerSeat(Transform seat, Vector3 standAt = default)
+    {
+        if (seat != null)
+        {
+            passengerSeat = seat;
+            body.Sit(seat);
+            SeatedPassenger.Value = true;
+        }
+        else if (SeatedPassenger.Value)
+        {
+            passengerSeat = null;
+            SeatedPassenger.Value = false;
+            body.StandUp(standAt, heli ? heli.GetComponent<Rigidbody>() : null);
+        }
+    }
+
     public const float DoorReach = 2.2f;
 
     /// <summary>Owner: open/close whichever cabin door you're standing next to.</summary>
@@ -277,6 +318,9 @@ public class NetworkPlayer : NetworkBehaviour
         }
         if (best != null) ToggleDoorRpc(best.left);
     }
+
+    /// <summary>Standing at the winch box? (for the on-screen hint and the R/Q keys)</summary>
+    public bool NearWinch => winch != null && winch.InReach(body.Eye);
 
     /// <summary>Is there a door within reach? (for the on-screen hint)</summary>
     public bool NearDoor

@@ -141,7 +141,7 @@ public class CrewVisual : MonoBehaviour
         // The player left while we were a detached ragdoll: clean up the orphaned body.
         if (root == null) { Destroy(gameObject); return; }
         if (player == null) return;
-        isLocal = player.IsOwner;
+        isLocal = player.IsLocalPlayer;
 
         bool knocked = player.IsSpawned && player.KnockedDown.Value;
         if (knocked && !Ragdolled) EnterRagdoll();
@@ -154,7 +154,7 @@ public class CrewVisual : MonoBehaviour
         Vector2 move = player.LocalMove.Value;       // x = right, y = forward (m/s)
         float speed = move.magnitude;
         float direction = 1f, targetLegTurn = 0f;
-        if (speed > 0.3f && !player.SeatedAsPilot.Value)
+        if (speed > 0.3f && !player.IsSeated)
         {
             float angle = Mathf.Atan2(move.x, move.y) * Mathf.Rad2Deg;     // 0 = forward, ±180 = back
             if (Mathf.Abs(angle) <= 100f) targetLegTurn = angle;
@@ -173,17 +173,17 @@ public class CrewVisual : MonoBehaviour
         lastBodyYaw = bodyYaw;
         shuffle = Mathf.MoveTowards(shuffle, speed < 0.3f && turnRate > 60f ? 1f : 0f, dt * 6f);
         anim.SetFloat(DirectionId, direction * Mathf.Max(rate, 0.3f), 0.1f, dt);
-        anim.SetBool(GroundedId, player.Grounded.Value || player.SeatedAsPilot.Value);
-        anim.SetBool(SeatedId, player.SeatedAsPilot.Value);
+        anim.SetBool(GroundedId, player.Grounded.Value || player.IsSeated);
+        anim.SetBool(SeatedId, player.IsSeated);
 
         // Lazy turning: the body swings round to face where you look instead of snapping.
         float rootYaw = root.eulerAngles.y;
-        bodyYaw = player.SeatedAsPilot.Value ? rootYaw : Mathf.LerpAngle(bodyYaw, rootYaw, 1f - Mathf.Exp(-turnSpeed * dt));
+        bodyYaw = player.IsSeated ? rootYaw : Mathf.LerpAngle(bodyYaw, rootYaw, 1f - Mathf.Exp(-turnSpeed * dt));
         if (Mathf.Abs(Mathf.DeltaAngle(bodyYaw, rootYaw)) > 100f) bodyYaw = rootYaw;
 
         // Lean into speeding up / stopping / turning.
         Vector3 accel = Vector3.ClampMagnitude(new Vector3(lastAccel.x, 0f, lastAccel.z), 25f);
-        Vector3 leanTarget = player.Grounded.Value && !player.SeatedAsPilot.Value ? accel * leanPerAccel : Vector3.zero;
+        Vector3 leanTarget = player.Grounded.Value && !player.IsSeated ? accel * leanPerAccel : Vector3.zero;
         // Critically damped: leans in once and settles, no rocking back and forth.
         leanVel += ((leanTarget - lean) * leanStiffness - leanVel * 2f * Mathf.Sqrt(leanStiffness)) * dt;
         lean += leanVel * dt;
@@ -217,7 +217,7 @@ public class CrewVisual : MonoBehaviour
         anim.SetLookAtWeight(1f, 0.3f, 0.9f, 0f, 0.6f);
         anim.SetLookAtPosition(Eye + look * 5f);
 
-        var heli = player.SeatedAsPilot.Value ? FindHeli() : null;
+        var heli = player.SeatedAsPilot.Value ? FindHeli() : null; // only the pilot's hands go to the controls
         var rig = heli ? heli.GetComponentInChildren<CockpitRig>() : null;
         Vector3? leftGrip = heli ? (rig && rig.GripCollective ? rig.GripCollective.position : heli.TransformPoint(collectiveGrip)) : null;
         Vector3? rightGrip = heli ? (rig && rig.GripCyclic ? rig.GripCyclic.position : heli.TransformPoint(stickGrip)) : null;
@@ -228,7 +228,7 @@ public class CrewVisual : MonoBehaviour
             player.HoldRight.Value, player.HoldPointRight.Value,
             isLocal ? player.LocalReachRight : player.ReachRight.Value, rightGrip);
 
-        bool onFeet = player.Grounded.Value && !player.SeatedAsPilot.Value;
+        bool onFeet = player.Grounded.Value && !player.IsSeated;
         FootIK(AvatarIKGoal.LeftFoot, anim.leftFeetBottomHeight, onFeet, ref leftFootWeight);
         FootIK(AvatarIKGoal.RightFoot, anim.rightFeetBottomHeight, onFeet, ref rightFootWeight);
     }
@@ -320,7 +320,7 @@ public class CrewVisual : MonoBehaviour
             swing += swingVel * dt;
             swing = Vector3.ClampMagnitude(swing, 0.6f);
 
-            bool airborne = player.IsSpawned && !player.Grounded.Value && !player.SeatedAsPilot.Value;
+            bool airborne = player.IsSpawned && !player.Grounded.Value && !player.IsSeated;
             Vector3 flail = airborne ? new Vector3(Mathf.Sin(Time.time * 13f), Mathf.Sin(Time.time * 9f + 1f), 0f) * 0.12f : Vector3.zero;
 
             FlopArm(leftUpperArm, leftHand.weight > 0.5f, swing + flail);

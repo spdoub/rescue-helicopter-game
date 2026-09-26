@@ -190,6 +190,7 @@ def build():
         for sx in (-0.13, 0.13):  # shoulder straps
             box(f"Strap_{k}_{sx}", (x + sx, 1.62, -0.4), (0.05, 0.62, 0.012), "Orange", "Cabin", rot=(-6, 0, 0), bevel=0.003)
         box(f"LapStrap_{k}", (x, 1.42, -0.1), (0.46, 0.05, 0.012), "Orange", "Cabin", rot=(70, 0, 0), bevel=0.003)
+        marker(f"M_BenchSeat_{k}", (x, 1.41, -0.22))  # where a rescued survivor sits (faces forward)
         box(f"Buckle_{k}", (x, 1.42, -0.09), (0.07, 0.06, 0.02), "Metal", "Cabin", rot=(70, 0, 0), bevel=0.005)
 
     # ---------------------------------------------------------------- cargo net on the rear wall (upper left) with bags
@@ -335,6 +336,27 @@ def build():
         group(n).location = to_b(pp)
     for n in ("Cyclic", "Collective", "PedalL", "PedalR"):
         group(n).parent = group("Interior")
+
+    # ---------------------------------------------------------------- rescue hoist (outside, above the right door)
+    # Bolted to the side of the engine deck; the boom sticks out past the door so the cable hangs
+    # clear of the sliding door. The cable + hook are built at runtime from M_HoistTip.
+    hz = 0.85
+    box("HoistMount", (0.73, 2.44, hz), (0.05, 0.3, 0.34), "DarkGrey", "Hoist", bevel=0.015)
+    for dz in (-0.12, 0.12):
+        for dy in (-0.1, 0.1):
+            cyl(f"HoistBolt_{dz}_{dy}", (0.76, 2.44 + dy, hz + dz), 0.014, 0.02, "Metal", "Hoist", rot=(0, 0, 90), segs=6)
+    box("HoistBoom", (1.05, 2.53, hz), (0.62, 0.09, 0.11), "Yellow", "Hoist", bevel=0.02)
+    tube("HoistBrace", [(0.75, 2.3, hz), (1.22, 2.49, hz)], 0.022, "Grey", "Hoist")
+    cyl("HoistDrum", (1.38, 2.5, hz), 0.11, 0.3, "DarkGrey", "Hoist", rot=(90, 0, 0), segs=14)
+    cyl("HoistDrumCapF", (1.38, 2.5, hz + 0.16), 0.08, 0.03, "Metal", "Hoist", rot=(90, 0, 0), segs=10)
+    cyl("HoistDrumCapB", (1.38, 2.5, hz - 0.16), 0.08, 0.03, "Metal", "Hoist", rot=(90, 0, 0), segs=10)
+    box("HoistMotor", (1.21, 2.62, hz), (0.16, 0.1, 0.14), "Grey", "Hoist", bevel=0.02)
+    cyl("HoistSheave", (1.4, 2.39, hz), 0.035, 0.04, "Black", "Hoist", rot=(90, 0, 0), segs=10)
+    box("HoistStripe0", (0.86, 2.53, hz), (0.05, 0.095, 0.115), "Black", "Hoist", rot=(0, 0, 35), bevel=0)
+    box("HoistStripe1", (0.98, 2.53, hz), (0.05, 0.095, 0.115), "Black", "Hoist", rot=(0, 0, 35), bevel=0)
+    tape("HoistTape", (1.12, 2.53, hz + 0.058), 0.2, -20, "Hoist")
+    marker("M_HoistTip", (1.4, 2.36, hz))
+    group("Hoist").parent = group("Interior")
 
     # ---------------------------------------------------------------- export
     for o in bpy.data.objects: o.select_set(True)

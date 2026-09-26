@@ -151,7 +151,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
                     float bob = visual != null ? visual.EyePosition.y - steady.y : 0f;
                     bobHeight = Mathf.Lerp(bobHeight, bob, 1f - Mathf.Exp(-10f * Time.deltaTime));
                     Vector3 want = steady + headLean + facing * eyeForward + Vector3.up * bobHeight;
-                    transform.position = KeepOutOfWalls(steady, want);
+                    transform.position = me.OnHelicopter.Value ? KeepOutOfWallsRiding(helicopter, steady, want) : KeepOutOfWalls(steady, want);
                 }
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }
@@ -163,15 +163,39 @@ public class FirstPersonSeatCamera : MonoBehaviour
         transform.rotation = helicopter.rotation * Quaternion.Euler(pitch, yaw, 0f);
     }
 
+    /// <summary>
+    /// Riding inside the moving helicopter: on the host its walls sit at the last physics step while
+    /// what you see is smoothed ahead of that (up to ~15 cm at speed), so do the wall check in the
+    /// helicopter's physics frame and bring the answer back to the smoothed one.
+    /// </summary>
+    public static Vector3 KeepOutOfWallsRiding(Transform heli, Vector3 from, Vector3 to)
+    {
+        Matrix4x4 toPhys = RenderToPhysics(heli);
+        Vector3 hit = KeepOutOfWalls(toPhys.MultiplyPoint3x4(from), toPhys.MultiplyPoint3x4(to));
+        return toPhys.inverse.MultiplyPoint3x4(hit);
+    }
+
+    /// <summary>Maps a point on the helicopter as drawn to where the same point is for physics right now.</summary>
+    public static Matrix4x4 RenderToPhysics(Transform heli)
+    {
+        var rb = heli ? heli.GetComponent<Rigidbody>() : null;
+        if (rb == null || rb.isKinematic || rb.interpolation == RigidbodyInterpolation.None) return Matrix4x4.identity;
+        return Matrix4x4.TRS(rb.position, rb.rotation, Vector3.one) * heli.worldToLocalMatrix;
+    }
+
     /// <summary>Pull the camera back toward your head if it would poke into a wall or the helicopter.</summary>
     static Vector3 KeepOutOfWalls(Vector3 from, Vector3 to)
     {
         const float radius = 0.1f;
         Vector3 d = to - from; float len = d.magnitude;
         if (len < 1e-4f) return to;
+        Vector3 result = to;
         if (Physics.SphereCast(from, radius, d / len, out RaycastHit hit, len, GameLayers.CameraSolid, QueryTriggerInteraction.Ignore))
-            return from + d / len * Mathf.Max(0f, hit.distance - 0.01f);
-        return to;
+            result = from + d / len * Mathf.Max(0f, hit.distance - 0.01f);
+        // Safety net (the cast misses things it starts inside, e.g. a thin handle while being thrown
+        // around a lurching cabin): never finish inside something solid.
+        if (Physics.CheckSphere(result, 0.06f, GameLayers.CameraSolid, QueryTriggerInteraction.Ignore)) result = from;
+        return result;
     }
 
     static void SetCursorLocked(bool locked)

@@ -13,6 +13,7 @@ public struct PlayerInput : INetworkSerializable
     public bool sprint;     // held
     public bool grabLeft;   // left mouse held: left hand reaches / grabs
     public bool grabRight;  // right mouse held: right hand reaches / grabs
+    public sbyte winch;     // at the winch box: +1 hold R (reel in), -1 hold Q (let out)
 
     public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
     {
@@ -24,5 +25,6 @@ public struct PlayerInput : INetworkSerializable
         s.SerializeValue(ref sprint);
         s.SerializeValue(ref grabLeft);
         s.SerializeValue(ref grabRight);
+        s.SerializeValue(ref winch);
     }
 }

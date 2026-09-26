@@ -1,0 +1,111 @@
+using UnityEngine;
+
+/// <summary>
+/// Automated test pilot for the full rescue: take off, hover so the hoist hangs over the survivor,
+/// wait until they're aboard and strapped in, fly to the hospital pad and land.
+/// Works on whichever machine holds the pilot seat (reads positions, so it's fine on a client).
+/// </summary>
+public class RescuePilot
+{
+    enum Phase { TakeOff, ToPickup, Hold, ToHospital, Land, Done }
+
+    Phase phase;
+    float holdY; Vector3 holdXZ;
+    float phaseSince;
+    Vector3 lastPos; float lastTime = -1f; Vector3 vel;
+    NetworkHelicopter heli;
+    SurvivorBrain survivor;
+    RescueZone zone;
+
+    public string Status => phase.ToString();
+
+    public HelicopterInput Tick(float t)
+    {
+        if (heli == null) heli = Object.FindAnyObjectByType<NetworkHelicopter>();
+        if (survivor == null) survivor = Object.FindAnyObjectByType<SurvivorBrain>();
+        if (zone == null) zone = Object.FindAnyObjectByType<RescueZone>();
+        if (heli == null) return default;
+
+        var h = heli.transform;
+        // Velocity from positions (the helicopter is kinematic on clients, so no rigidbody speed there).
+        if (lastTime >= 0f && Time.time > lastTime) vel = Vector3.Lerp(vel, (h.position - lastPos) / (Time.time - lastTime), 0.3f);
+        lastPos = h.position; lastTime = Time.time;
+        float since = Time.time - phaseSince;
+
+        switch (phase)
+        {
+            case Phase.TakeOff:
+                // Wait for the crew to climb aboard first (give up waiting after a while).
+                if (!CrewAboard() && t < 30f) { phaseSince = Time.time; return default; }
+                if (Time.time - phaseSince < 2f) return default;
+                if (h.position.y > 6f) Next(Phase.ToPickup);
+                return new HelicopterInput { collective = 1f };
+
+            case Phase.ToPickup:
+            case Phase.Hold:
+            {
+                if (survivor == null) return Hover(h.position + Vector3.up * 0f, 0f);
+                // Put the hoist tip (helicopter-local 1.4, _, 0.85) straight above the survivor.
+                Vector3 target = survivor.transform.position - h.rotation * new Vector3(1.4f, 0f, 0.85f);
+                // Hover height is fixed once over the pickup (following her up while she's
+                // winched up would just climb forever).
+                if (phase == Phase.ToPickup) holdY = survivor.transform.position.y + 9f;
+                target.y = holdY;
+                if (phase == Phase.Hold) { target.x = holdXZ.x; target.z = holdXZ.z; }
+                if (phase == Phase.ToPickup && Flat(target - h.position).magnitude < 1.2f && vel.magnitude < 1f) { Next(Phase.Hold); holdXZ = target; }
+                if (survivor.Current == SurvivorBrain.State.Seated && since > 1f) Next(Phase.ToHospital);
+                return FlyTo(h, target, phase == Phase.Hold ? 2f : 7f, 0f);
+            }
+
+            case Phase.ToHospital:
+            {
+                if (zone == null) return Hover(h.position, 0f);
+                Vector3 target = zone.transform.position + Vector3.up * 14f;
+                if (Flat(target - h.position).magnitude < 1.5f && vel.magnitude < 1.2f) Next(Phase.Land);
+                return FlyTo(h, target, 8f, 0f);
+            }
+
+            case Phase.Land:
+            {
+                Vector3 target = zone.transform.position;
+                var input = FlyTo(h, target, 1.5f, 0f);
+                float height = h.position.y - zone.transform.position.y;
+                input.collective = height > 3f ? -0.6f : -0.25f;
+                if (heli.GetComponent<HelicopterController>().IsLanded || (height < 0.6f && Mathf.Abs(vel.y) < 0.2f)) Next(Phase.Done);
+                return input;
+            }
+
+            default:
+                return default; // landed: collective at rest, engine idles
+        }
+    }
+
+    static bool CrewAboard()
+    {
+        foreach (var p in Object.FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None))
+            if (!p.IsNpc && !p.SeatedAsPilot.Value && p.OnHelicopter.Value) return true;
+        return false;
+    }
+
+    void Next(Phase p) { phase = p; phaseSince = Time.time; }
+
+    HelicopterInput Hover(Vector3 at, float heading) => FlyTo(heli.transform, at, 2f, heading);
+
+    /// <summary>Tilt toward the target (speed limited, braking as it arrives), climb/descend to its height, hold a heading.</summary>
+    HelicopterInput FlyTo(Transform h, Vector3 target, float maxSpeed, float heading)
+    {
+        Vector3 err = Flat(target - h.position);
+        Vector3 wantVel = err.normalized * Mathf.Min(maxSpeed, err.magnitude * 0.7f);
+        Vector3 dv = wantVel - Flat(vel);
+        Vector3 fwd = Flat(h.forward).normalized, right = Vector3.Cross(Vector3.up, fwd);
+        return new HelicopterInput
+        {
+            pitch = Mathf.Clamp(Vector3.Dot(dv, fwd) * 0.25f, -0.5f, 0.5f),
+            roll = Mathf.Clamp(Vector3.Dot(dv, right) * 0.25f, -0.5f, 0.5f),
+            collective = Mathf.Clamp((target.y - h.position.y) * 0.35f - vel.y * 0.1f, -1f, 1f),
+            yaw = Mathf.Clamp(Mathf.DeltaAngle(h.eulerAngles.y, heading) / 30f, -1f, 1f),
+        };
+    }
+
+    static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
+}
