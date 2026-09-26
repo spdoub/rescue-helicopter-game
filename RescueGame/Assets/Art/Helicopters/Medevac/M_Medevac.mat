@@ -30,11 +30,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AffineAmount: 0.3
-    - _Ambient: 0.12
+    - _Ambient: 0.1
     - _FlatShading: 1
-    - _ShadeSteps: 3
-    - _SnapResolution: 480
     - _WorldUVScale: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
