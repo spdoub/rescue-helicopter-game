@@ -103,6 +103,11 @@ public static class WinchBuilder
         dmg.smokeMaterial = smoke;
         dmg.crash = C("crash_thud"); dmg.rotorStrike = C("rotor_strike"); dmg.alarm = C("damage_alarm");
         EditorUtility.SetDirty(dmg);
+
+        // weather: wind + streaks
+        var weather = heli.GetComponent<Weather>() ?? heli.AddComponent<Weather>();
+        weather.streakMaterial = smoke;
+        EditorUtility.SetDirty(weather);
         EditorUtility.SetDirty(lights);
         Debug.Log("[Audio] helicopter sounds wired: " + (a.rotorLoop && a.winchMotor && a.doorSlide && a.hookClank && a.deliveredJingle));
     }

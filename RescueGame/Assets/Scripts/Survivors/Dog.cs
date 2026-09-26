@@ -19,7 +19,7 @@ public class Dog : NetworkBehaviour
     public float runSpeed = 5.5f;
     public float accel = 18f;
     [Tooltip("The hook must hang within this height of his roof, and move slower than this, for him to go for it.")]
-    public float hookMaxHeight = 1.4f, hookMaxSpeed = 0.9f;
+    public float hookMaxHeight = 1.4f, hookMaxSpeed = 1.3f;
     [Tooltip("Where he rides in the cabin (helicopter space).")]
     public Vector3 cabinSpot = new(0.35f, 0.95f, 0.35f); // between the recliner's spot, the bench and the winch box
     public Transform model;

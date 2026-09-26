@@ -517,6 +517,7 @@ public class SurvivorBrain : NetworkBehaviour
     void NewCall()
     {
         if (!FindRoofSpot(out Vector3 spot)) { reportedAt = Time.time; return; }
+        Weather.Instance?.Roll(); // new call, new weather
         if (kind == Kind.ReclinerGuy && chair != null)
         {
             chair.SetDown(spot, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), heli ? heli.GetComponent<Rigidbody>() : null);

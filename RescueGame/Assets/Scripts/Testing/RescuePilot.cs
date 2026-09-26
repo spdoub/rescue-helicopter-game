@@ -10,7 +10,7 @@ public class RescuePilot
     enum Phase { TakeOff, ToPickup, Hold, ToHospital, Land, Done }
 
     readonly SurvivorBrain.Kind target;
-    const float CruiseAltitude = 55f; // above the tallest buildings
+    const float CruiseAltitude = 48f; // above the tallest buildings
     readonly float lingerAfterBoarding;
     /// <param name="lingerAfterBoarding">Keep hovering this long after they're aboard before heading to the hospital (tests).</param>
     public RescuePilot(SurvivorBrain.Kind target = SurvivorBrain.Kind.StrongGrandma, float lingerAfterBoarding = 0f)
@@ -129,7 +129,7 @@ public class RescuePilot
         {
             pitch = Mathf.Clamp(Vector3.Dot(dv, fwd) * 0.25f, -0.5f, 0.5f),
             roll = Mathf.Clamp(Vector3.Dot(dv, right) * 0.25f, -0.5f, 0.5f),
-            collective = Mathf.Clamp((target.y - h.position.y) * 0.35f - vel.y * 0.1f, -1f, 1f),
+            collective = Mathf.Clamp((target.y - h.position.y) * 0.35f - vel.y * 0.1f, -0.45f, 1f), // gentle descents (crew aboard)
             yaw = Mathf.Clamp(Mathf.DeltaAngle(h.eulerAngles.y, heading) / 30f, -1f, 1f),
         };
     }

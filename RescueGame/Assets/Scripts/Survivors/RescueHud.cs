@@ -69,12 +69,25 @@ public class RescueHud : MonoBehaviour
         }
 
         float y = 94f; bool anyoneAboard = false;
+        var weather = Weather.Instance;
+        if (weather != null && weather.IsSpawned)
+        {
+            Vector3 w = weather.Wind.Value;
+            float knots = w.magnitude * 1.944f;
+            string[] compass = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+            float from = (Mathf.Atan2(-w.x, -w.z) * Mathf.Rad2Deg + 360f) % 360f;   // where it's blowing FROM
+            string kind = weather.Current.Value switch { Weather.Kind.Calm => "calm", Weather.Kind.Breezy => "breezy", _ => "GUSTY" };
+            objective.normal.textColor = weather.Current.Value == Weather.Kind.Gusty ? new Color(1f, 0.8f, 0.5f) : Color.white;
+            Outlined(new Rect(26, y, 620, 30), $"WIND: {knots:0} kn from {compass[Mathf.RoundToInt(from / 45f) % 8]} ({kind})", objective);
+            objective.normal.textColor = Color.white;
+            y += 30f;
+        }
         if (damage != null && damage.IsSpawned && damage.Health.Value < 0.999f)
         {
             float h = damage.Health.Value;
             fuelStyle.normal.textColor = h < 0.3f && Mathf.Repeat(Time.time, 0.6f) < 0.3f ? new Color(1f, 0.35f, 0.25f) : h < 0.6f ? new Color(1f, 0.75f, 0.4f) : Color.white;
             string state = h <= 0f ? "  ENGINE FAILING - LAND IT" : h < 0.3f ? "  (land on the home pad to repair)" : "";
-            Outlined(new Rect(26, 92, 620, 32), $"HULL: {Mathf.RoundToInt(h * 100f)}%{state}", fuelStyle);
+            Outlined(new Rect(26, y - 2, 620, 32), $"HULL: {Mathf.RoundToInt(h * 100f)}%{state}", fuelStyle);
             y += 30f;
         }
         foreach (var s in all)

@@ -6110,6 +6110,7 @@ GameObject:
   - component: {fileID: 1229749794}
   - component: {fileID: 1229749795}
   - component: {fileID: 1229749796}
+  - component: {fileID: 1229749797}
   m_Layer: 0
   m_Name: Helicopter
   m_TagString: Untagged
@@ -6442,6 +6443,35 @@ MonoBehaviour:
   alarm: {fileID: 8300000, guid: a0a8c794a651149b08669cffaef59fa5, type: 3}
   smokeMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
   Health:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
+--- !u!114 &1229749797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f244992f0ebba43739d67566743d2f7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Weather
+  ShowTopMostFoldoutHeaderGroup: 1
+  baseSpeeds: {x: 1.5, y: 5, z: 8}
+  gustSpeeds: {x: 1, y: 4, z: 9}
+  heliPush: 0.12
+  hangingPush: 0.18
+  peoplePush: 0.15
+  streakMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
+  Wind:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: {x: 0, y: 0, z: 0}
+  Current:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
