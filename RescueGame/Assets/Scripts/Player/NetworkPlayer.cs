@@ -62,7 +62,7 @@ public class NetworkPlayer : NetworkBehaviour
     bool pendingJump;                 // host: a jump press waiting for the next physics tick
     float lastInputTime;
     const float InputTimeout = 0.5f;
-    const float SeatReach = 1.8f;
+    const float SeatReach = 1.5f;
 
     public static bool ForceSeatForTests;
     public static bool HoldGrabForTests;   // test switch: look down and hold grab the whole time
@@ -140,6 +140,12 @@ public class NetworkPlayer : NetworkBehaviour
     }
 
     public override void OnNetworkDespawn()
+    {
+        if (passengerSeat != null) SurvivorBrain.TakenSeats.Remove(passengerSeat);
+        OnNetworkDespawnInner();
+    }
+
+    void OnNetworkDespawnInner()
     {
         if (Local == this) Local = null;
         if (IsServer && heli != null && SeatedAsPilot.Value) heli.ClearPilot();
@@ -322,6 +328,49 @@ public class NetworkPlayer : NetworkBehaviour
     /// <summary>Standing at the winch box? (for the on-screen hint and the R/Q keys)</summary>
     public bool NearWinch => winch != null && winch.InReach(body.Eye);
 
+    /// <summary>The seat E would take right now: the pilot's (pilot = true) or a cabin seat, whichever is nearer your feet; null if none in reach.</summary>
+    public Transform SeatInReach(out bool pilot)
+    {
+        pilot = false;
+        if (heli == null || SeatedAsPilot.Value || SeatedPassenger.Value) return null;
+        Transform best = null; float bestD = SeatReach;
+        foreach (var n in new[] { "M_BenchSeat_0", "M_BenchSeat_1", "M_BenchSeat_2", "M_CoPilotSeat" })
+        {
+            var s = FindDeep(heli.transform, n);
+            if (s == null) continue;
+            float d = Vector3.Distance(body.Feet, s.position);
+            if (d < bestD) { bestD = d; best = s; }
+        }
+        float dp = heli.pilotSeat ? Vector3.Distance(body.Feet, heli.pilotSeat.position) : 99f;
+        if (dp < SeatReach && (best == null || dp < bestD)) { pilot = true; return heli.pilotSeat; }
+        return best;
+    }
+
+    /// <summary>Close enough to the pilot's seat, and it's the nearest seat? (for the on-screen prompt)</summary>
+    public bool NearPilotSeat => SeatInReach(out bool p) != null && p;
+
+    /// <summary>The nearest cabin seat you could sit in (bench seats, the co-pilot's seat), or null.</summary>
+    public Transform NearestCabinSeat() { var s = SeatInReach(out bool p); return p ? null : s; }
+
+    /// <summary>The door you're next to (for the prompt), or null.</summary>
+    public SlidingDoor NearestDoor()
+    {
+        SlidingDoor best = null; float bestD = DoorReach;
+        foreach (var d in FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None))
+        {
+            float dist = Vector3.Distance(body.Eye, d.HandlePoint);
+            if (dist < bestD) { bestD = dist; best = d; }
+        }
+        return best;
+    }
+
+    static Transform FindDeep(Transform t, string name)
+    {
+        if (t.name == name) return t;
+        foreach (Transform c in t) { var f = FindDeep(c, name); if (f) return f; }
+        return null;
+    }
+
     /// <summary>Is there a door within reach? (for the on-screen hint)</summary>
     public bool NearDoor
     {
@@ -369,14 +418,33 @@ public class NetworkPlayer : NetworkBehaviour
             body.StandUp(heli.pilotSeatExit.position, heli.GetComponent<Rigidbody>());
             return;
         }
+        // Sitting in a cabin seat: E gets you up again, onto the cabin floor in front of it.
+        if (SeatedPassenger.Value)
+        {
+            var seat = passengerSeat;
+            Vector3 standAt = seat != null && seat.name == "M_CoPilotSeat" ? heli.transform.TransformPoint(new Vector3(0f, 0.97f, 1.2f))
+                            : seat != null ? seat.position + seat.forward * 0.75f + Vector3.up * 0.05f : heli.pilotSeatExit.position;
+            if (seat != null) SurvivorBrain.TakenSeats.Remove(seat);
+            SetPassengerSeat(null, standAt);
+            return;
+        }
 
-        bool inReach = Vector3.Distance(body.Eye, heli.pilotSeat.position) < SeatReach;
+        var chosen = SeatInReach(out bool wantPilot);
+        bool inReach = chosen != null && wantPilot;
         bool allowForce = force && Debug.isDebugBuild;
         if ((inReach || allowForce) && heli.PilotClientId.Value == NetworkHelicopter.NoPilot && (!body.IsKnockedDown || allowForce))
         {
             SeatedAsPilot.Value = true;
             heli.SetPilot(OwnerClientId);
             body.Sit(heli.pilotSeat);
+            return;
+        }
+        // Otherwise a free cabin seat nearby: strap in (out of the way of the ragdoll chaos).
+        var cabinSeat = NearestCabinSeat();
+        if (cabinSeat != null && !body.IsKnockedDown && !SurvivorBrain.TakenSeats.Contains(cabinSeat))
+        {
+            SurvivorBrain.TakenSeats.Add(cabinSeat);
+            SetPassengerSeat(cabinSeat);
         }
     }
 }

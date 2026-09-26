@@ -131,6 +131,13 @@ public class NetworkBootstrap : MonoBehaviour
                 yield return null; yield return null;
             }
         }
+        if (Camera.main && heli)
+        {
+            var cam = Camera.main.transform;
+            var me = NetworkPlayer.Local;
+            Debug.Log($"[Shot] camera heli-local {heli.transform.InverseTransformPoint(cam.position):F2} fwd {heli.transform.InverseTransformDirection(cam.forward):F2}" +
+                      (me ? $" eye heli-local {heli.transform.InverseTransformPoint(me.GetComponent<CrewBody>().Eye):F2} pilot {me.SeatedAsPilot.Value}" : ""));
+        }
         ScreenCapture.CaptureScreenshot(file);
         yield return new WaitForSeconds(1f);
         Application.Quit();
@@ -240,10 +247,11 @@ public class NetworkBootstrap : MonoBehaviour
         if (!nm.IsHost && GUILayout.Button("Host my own game")) StartCoroutine(Restart(StartHost));
 
         if (heli != null && heli.IsSpawned)
-            GUILayout.Label(heli.IsLocalPilot ? "PILOT - E to get up" : "Walk to the cockpit, E to fly");
+            GUILayout.Label(heli.IsLocalPilot ? "PILOT - E to get up" : "Pilot: stand by the pilot's seat and press E");
         GUILayout.Label("WASD walk, Shift run, Space jump, click to grab");
-        GUILayout.Label(NetworkPlayer.Local != null && NetworkPlayer.Local.NearDoor ? "F: open / close door" : "F: open / close a door, or buy the upgrade card you're looking at");
-        if (NetworkPlayer.Local != null && NetworkPlayer.Local.NearWinch) GUILayout.Label("WINCH: hold R reel in, Q let out");
+        GUILayout.Label("E: take the controls / sit in a seat / get up");
+        GUILayout.Label("F: doors, and buying at the upgrade board");
+        GUILayout.Label("Winch box: hold Q to lower the hook, R to raise it");
         GUILayout.Label("Esc frees the mouse, click to look again.  H hides this");
         GUILayout.EndArea();
     }

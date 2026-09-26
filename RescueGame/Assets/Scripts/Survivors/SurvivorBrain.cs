@@ -908,7 +908,8 @@ public class SurvivorBrain : NetworkBehaviour
         foreach (var c in heli.GetComponentsInChildren<Collider>()) Physics.IgnoreCollision(mine, c, !on);
     }
 
-    static readonly System.Collections.Generic.HashSet<Transform> TakenSeats = new();
+    /// <summary>Cabin seats in use (by survivors or crew) on the host.</summary>
+    public static readonly System.Collections.Generic.HashSet<Transform> TakenSeats = new();
     Transform FreeSeat()
     {
         for (int k = 2; k >= 0; k--)  // right side first: Recliner Guy's chair takes the left of the cabin

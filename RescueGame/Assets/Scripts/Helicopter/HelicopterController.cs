@@ -90,8 +90,9 @@ public class HelicopterController : MonoBehaviour
 
         if (engineOn)
         {
-            if (mainRotor) mainRotor.Rotate(0f, rotorSpinSpeed * Time.deltaTime, 0f, Space.Self);
-            if (tailRotor) tailRotor.Rotate(rotorSpinSpeed * Time.deltaTime, 0f, 0f, Space.Self);
+            // (about the helicopter's own axes, whatever way the imported pivots happen to point)
+            if (mainRotor) mainRotor.Rotate(transform.up, rotorSpinSpeed * Time.deltaTime, Space.World);
+            if (tailRotor) tailRotor.Rotate(transform.right, rotorSpinSpeed * 1.6f * Time.deltaTime, Space.World);
         }
     }
 

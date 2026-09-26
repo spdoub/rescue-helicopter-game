@@ -125,6 +125,7 @@ SUITE = [
     dict(name="exitjump", scenario="exitjump", duration=45),
     dict(name="door", scenario="door", duration=35),
     dict(name="upgrade", scenario="upgrade", duration=40),
+    dict(name="sit", scenario="sit", duration=45),
     dict(name="winch", scenario="winch", duration=30),
     dict(name="solo_hover", scenario="solo_hover", duration=50),
     dict(name="crash", scenario="crash", duration=50),

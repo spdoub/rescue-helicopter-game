@@ -24,6 +24,13 @@ public class NetworkHelicopter : NetworkBehaviour
     public NetworkVariable<bool> DoorLeftOpen = new(true), DoorRightOpen = new(true);
     public bool DoorOpen(bool left) => left ? DoorLeftOpen.Value : DoorRightOpen.Value;
 
+    void Start()
+    {
+        // Dev builds: "-doorsclosed" starts with both doors shut (screenshots, tests).
+        if (Debug.isDebugBuild && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-doorsclosed") >= 0)
+            foreach (var d in GetComponentsInChildren<SlidingDoor>()) d.OfflineToggle();
+    }
+
     /// <summary>Host: someone who isn't the pilot is grabbing the controls (added on top of the pilot's).</summary>
     public void MeddleFor(HelicopterInput meddle, float seconds) { Meddle = meddle; meddleUntil = Time.time + seconds; }
     HelicopterInput Meddle; float meddleUntil;
@@ -65,6 +72,8 @@ public class NetworkHelicopter : NetworkBehaviour
 
         if (IsServer)
             NetworkManager.OnClientDisconnectCallback += HandleClientDisconnect;
+        if (IsServer && Debug.isDebugBuild && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-doorsclosed") >= 0)
+        { DoorLeftOpen.Value = false; DoorRightOpen.Value = false; }
         PilotClientId.OnValueChanged += (_, _) => pilotSince = Time.time;
     }
 

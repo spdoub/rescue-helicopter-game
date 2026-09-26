@@ -420,6 +420,29 @@ public class PlaytestDirector : MonoBehaviour
                 break;
             }
 
+            case "sit": // climb in, sit on the rear bench (E), get up again (E), then the co-pilot seat
+            {
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("to the bench", d => d.Heli.transform.TransformPoint(new Vector3(0f, 1f, 0.35f)), 0.3f, 8f));
+                Add(new Until("a seat is in reach", d => d.Me.NearestCabinSeat() != null, 3f));
+                Add(new Seat());
+                Add(new Until("sitting on the bench", d => d.Me.SeatedPassenger.Value, 3f));
+                Add(new Act("sit a while", 2f));
+                Add(new Seat());
+                Add(new Until("standing again", d => !d.Me.SeatedPassenger.Value && d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("line up with the gap", d => d.Heli.transform.TransformPoint(new Vector3(0f, 1f, 1.1f)), 0.25f, 8f));
+                Add(new GoTo("into the cockpit doorway, co-pilot side", d => d.Heli.transform.TransformPoint(new Vector3(-0.12f, 1f, 1.42f)), 0.2f, 8f));
+                Add(new Until("co-pilot seat is the nearest", d => { var s = d.Me.SeatInReach(out bool p); return s != null && !p && s.name == "M_CoPilotSeat"; }, 2f));
+                Add(new Seat());
+                Add(new Until("sitting in the co-pilot seat", d => d.Me.SeatedPassenger.Value, 3f));
+                Add(new Act("sit a while", 2f));
+                Add(new Seat());
+                Add(new Until("up again", d => !d.Me.SeatedPassenger.Value, 3f));
+                break;
+            }
+
             case "rescue_crew": // winch operator for a full rescue (someone else flies with the "rescue" pilot bot)
                 RescueRounds(SurvivorBrain.Kind.StrongGrandma, 2, door, cabin);
                 break;

@@ -35,6 +35,12 @@ public class RescueHud : MonoBehaviour
         fuelStyle = new GUIStyle(objective) { fontSize = 24 };
         marker = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
         marker.normal.textColor = new Color(1f, 0.84f, 0.2f);
+        promptBox = new GUIStyle(GUI.skin.box);
+        promptBox.normal.background = Solid(new Color(0.08f, 0.07f, 0.09f, 0.78f));
+        keyCap = new GUIStyle(GUI.skin.box) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+        keyCap.normal.background = Solid(new Color(1f, 0.84f, 0.2f)); keyCap.normal.textColor = new Color(0.1f, 0.08f, 0.05f);
+        promptStyle = new GUIStyle(GUI.skin.label) { fontSize = 19, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
+        promptStyle.normal.textColor = Color.white;
     }
 
     static Texture2D Solid(Color c)
@@ -232,7 +238,40 @@ public class RescueHud : MonoBehaviour
             GUI.Box(new Rect((Screen.width - w) / 2f, 70f, w, 56f), "DELIVERED!  " + report, banner);
         }
         UpgradePrompt(cam, cash);
+        ActionPrompt();
     }
+
+    /// <summary>The one thing you can do right now, as a key-cap prompt just under the centre of the screen:
+    /// take the controls, sit down, get up, open or close a door, work the winch.</summary>
+    void ActionPrompt()
+    {
+        var me = NetworkPlayer.Local;
+        if (me == null || !me.IsSpawned) return;
+        if (UpgradeBoard.Instance && UpgradeBoard.Instance.Aimed(Camera.main) >= 0) return; // the board has its own
+        var lines = new System.Collections.Generic.List<(string key, string what)>();
+        if (me.SeatedAsPilot.Value) lines.Add(("E", "Leave the controls"));
+        else if (me.SeatedPassenger.Value) lines.Add(("E", "Stand up"));
+        else
+        {
+            if (me.NearPilotSeat) lines.Add(("E", "Take the controls"));
+            else if (me.NearestCabinSeat() != null) lines.Add(("E", "Sit down"));
+            var door = me.NearestDoor();
+            if (door != null) lines.Add(("F", door.IsOpen ? "Close the door" : "Open the door"));
+            if (me.NearWinch) { lines.Add(("Q", "Lower the hook (hold)")); lines.Add(("R", "Raise the hook (hold)")); }
+        }
+        if (lines.Count == 0) return;
+        float y = Screen.height * 0.56f;
+        foreach (var (key, what) in lines)
+        {
+            float w = 46f + promptStyle.CalcSize(new GUIContent(what)).x + 24f;
+            float x = (Screen.width - w) / 2f;
+            GUI.Box(new Rect(x, y, w, 40f), "", promptBox);
+            GUI.Label(new Rect(x + 6f, y + 5f, 30f, 30f), key, keyCap);
+            GUI.Label(new Rect(x + 44f, y + 4f, w - 50f, 32f), what, promptStyle);
+            y += 46f;
+        }
+    }
+    GUIStyle promptBox, keyCap, promptStyle;
 
     /// <summary>Looking at a card on the upgrade board: what it is and how to buy it. Plus the till receipt.</summary>
     void UpgradePrompt(Camera cam, int cash)

@@ -22,6 +22,8 @@ public class CityGenerator : MonoBehaviour
 
     static readonly string[] BrickNames = { "Brick_Red", "Brick_Brown", "Brick_Tan" };
     static CityGenerator current;
+    public static CityGenerator Current => current;
+    public const float StreetPitch = 24f;
 
     void Awake()
     {
@@ -141,9 +143,26 @@ public class CityGenerator : MonoBehaviour
                 else if (h > 4.5f)
                     Window(mb, o + along * x + Vector3.up * 1.2f, along, outN, 1.0f, 1.5f, rnd.NextDouble() < 0.12, false);
                 for (int fl = 0; fl < floors; fl++)
-                    Window(mb, o + along * x + Vector3.up * (GroundFloorH + 0.7f + fl * FloorH), along, outN, 1.05f, 1.6f, rnd.NextDouble() < 0.15, false);
+                    Window(mb, o + along * x + Vector3.up * (GroundFloorH + 0.7f + fl * FloorH), along, outN, 1.05f, 1.6f, rnd.NextDouble() < 0.3, false);
             }
         }
+
+        // a fire escape zig-zagging up one side (not the shop side), on some of the taller buildings
+        if (h > 9f && rnd.NextDouble() < 0.45)
+        {
+            int f = (shopFace + 1 + rnd.Next(3)) % 4;
+            var (o, along, outN, len) = faces[f];
+            if (len >= 8f) FireEscape(mb, o, along, outN, len, h, rnd);
+        }
+        // the shop's sign above its windows, and now and then a hanging sign on a bracket
+        if (h > 5f)
+        {
+            var (o, along, outN, len) = faces[shopFace];
+            ShopSign(mb, o, along, outN, len, rnd);
+        }
+        // rooftop billboard on some of the taller ones
+        if (h > 12f && bodyCollider && rnd.NextDouble() < 0.18)
+            Billboard(mb, w, d, h, rnd);
 
         // roof and parapet (walkable roof stays at h, like the grey-box collider)
         mb.Quad(Roof, new Vector3(-hw, h + 0.005f, -hd), new Vector3(hw, h + 0.005f, -hd), new Vector3(hw, h + 0.005f, hd), new Vector3(-hw, h + 0.005f, hd), Vector3.up);
@@ -177,6 +196,150 @@ public class CityGenerator : MonoBehaviour
             bc.center = c; bc.size = s;
         }
         return go;
+    }
+
+    static readonly string[] ShopWords = { "DELI", "PIZZA", "LAUNDRY", "CAFE", "BAR", "SHOES", "BOOKS", "PAWN", "DINER", "MARKET", "BAGELS", "TATTOO", "RADIO", "HOTEL", "NAILS", "FLORIST", "TACOS", "VIDEO", "LIQUOR", "DONUTS", "REPAIR", "NOODLES", "BARBER", "CHECKS", "SUBS", "OPTICS", "TOYS", "BEDS", "GRILL", "GYM" };
+    static readonly string[] BillWords = { "EAT", "SALE", "SODA", "FLY", "WOW", "OPEN", "NOW", "CALL", "DRINK", "LUCKY" };
+
+    /// <summary>Block letters (5x7 pixel font) as little boxes standing proud of a surface facing outN, centred on 'centre'.</summary>
+    static void Letters(Kit mb, int sub, string text, Vector3 centre, Vector3 along, Vector3 outN, float height, float thick)
+    {
+        float px = height / 7f;
+        float total = (text.Length * 6 - 1) * px;
+        Vector3 start = centre - along * (total / 2f);
+        for (int ci = 0; ci < text.Length; ci++)
+        {
+            if (!Font.TryGetValue(text[ci], out var rows)) continue;
+            for (int r = 0; r < 7; r++)
+            {
+                string row = rows[r];
+                int c = 0;
+                while (c < 5)
+                {
+                    if (row[c] == '1')
+                    {
+                        int c0 = c; while (c < 5 && row[c] == '1') c++;
+                        int n = c - c0;
+                        Vector3 p = start + along * ((ci * 6 + c0 + n / 2f) * px) + Vector3.up * ((3 - r) * px) + outN * (thick / 2f);
+                        mb.Box(sub, p, Abs(along * (n * px * 0.95f)) + Vector3.up * (px * 0.92f) + Abs(outN * thick));
+                    }
+                    else c++;
+                }
+            }
+        }
+    }
+
+    static readonly Dictionary<char, string[]> Font = new()
+    {
+        ['A'] = new[] { ".111.", "1...1", "1...1", "11111", "1...1", "1...1", "1...1" },
+        ['B'] = new[] { "1111.", "1...1", "1...1", "1111.", "1...1", "1...1", "1111." },
+        ['C'] = new[] { ".1111", "1....", "1....", "1....", "1....", "1....", ".1111" },
+        ['D'] = new[] { "1111.", "1...1", "1...1", "1...1", "1...1", "1...1", "1111." },
+        ['E'] = new[] { "11111", "1....", "1....", "1111.", "1....", "1....", "11111" },
+        ['F'] = new[] { "11111", "1....", "1....", "1111.", "1....", "1....", "1...." },
+        ['G'] = new[] { ".1111", "1....", "1....", "1..11", "1...1", "1...1", ".1111" },
+        ['H'] = new[] { "1...1", "1...1", "1...1", "11111", "1...1", "1...1", "1...1" },
+        ['I'] = new[] { "11111", "..1..", "..1..", "..1..", "..1..", "..1..", "11111" },
+        ['K'] = new[] { "1...1", "1..1.", "1.1..", "11...", "1.1..", "1..1.", "1...1" },
+        ['L'] = new[] { "1....", "1....", "1....", "1....", "1....", "1....", "11111" },
+        ['M'] = new[] { "1...1", "11.11", "1.1.1", "1...1", "1...1", "1...1", "1...1" },
+        ['N'] = new[] { "1...1", "11..1", "1.1.1", "1..11", "1...1", "1...1", "1...1" },
+        ['O'] = new[] { ".111.", "1...1", "1...1", "1...1", "1...1", "1...1", ".111." },
+        ['P'] = new[] { "1111.", "1...1", "1...1", "1111.", "1....", "1....", "1...." },
+        ['Q'] = new[] { ".111.", "1...1", "1...1", "1...1", "1.1.1", "1..1.", ".11.1" },
+        ['R'] = new[] { "1111.", "1...1", "1...1", "1111.", "1.1..", "1..1.", "1...1" },
+        ['S'] = new[] { ".1111", "1....", "1....", ".111.", "....1", "....1", "1111." },
+        ['T'] = new[] { "11111", "..1..", "..1..", "..1..", "..1..", "..1..", "..1.." },
+        ['U'] = new[] { "1...1", "1...1", "1...1", "1...1", "1...1", "1...1", ".111." },
+        ['V'] = new[] { "1...1", "1...1", "1...1", "1...1", "1...1", ".1.1.", "..1.." },
+        ['W'] = new[] { "1...1", "1...1", "1...1", "1.1.1", "1.1.1", "11.11", "1...1" },
+        ['X'] = new[] { "1...1", "1...1", ".1.1.", "..1..", ".1.1.", "1...1", "1...1" },
+        ['Y'] = new[] { "1...1", "1...1", ".1.1.", "..1..", "..1..", "..1..", "..1.." },
+        ['Z'] = new[] { "11111", "....1", "...1.", "..1..", ".1...", "1....", "11111" },
+        ['J'] = new[] { "..111", "...1.", "...1.", "...1.", "...1.", "1..1.", ".11.." },
+    };
+
+    /// <summary>Sign box above the shop windows with the shop's name in block letters; sometimes a hanging sign too.</summary>
+    static void ShopSign(Kit mb, Vector3 o, Vector3 along, Vector3 outN, float len, System.Random rnd)
+    {
+        string word = ShopWords[rnd.Next(ShopWords.Length)];
+        int boxSub = new[] { Accent, TrimDark, Wood }[rnd.Next(3)];
+        int letterSub = boxSub == Accent ? TrimLight : boxSub == Wood ? TrimLight : GlassLit;
+        float signLen = Mathf.Min(len - 1f, Mathf.Max(3.2f, word.Length * 0.42f + 1.2f));
+        float y = 3.62f, hgt = 0.6f;
+        Vector3 c = o + along * (len / 2f) + Vector3.up * (y + hgt / 2f) + outN * 0.08f;
+        mb.Box(boxSub, c, Abs(along * signLen) + Vector3.up * hgt + Abs(outN * 0.16f));
+        mb.Box(TrimLight, c + outN * 0.02f, Abs(along * (signLen + 0.08f)) + Vector3.up * (hgt + 0.08f) + Abs(outN * 0.04f)); // frame behind
+        Letters(mb, letterSub, word, c + outN * 0.08f, along, outN, 0.36f, 0.03f);
+        if (rnd.NextDouble() < 0.5)
+        {
+            // hanging sign on a bracket near one end
+            Vector3 b = o + along * (len * 0.2f) + Vector3.up * 3.3f;
+            mb.Box(Metal, b + outN * 0.45f, Abs(along * 0.05f) + Vector3.up * 0.05f + Abs(outN * 0.9f));
+            Vector3 sc = b + outN * 0.7f - Vector3.up * 0.42f;
+            mb.Box(boxSub, sc, Abs(along * 0.06f) + Vector3.up * 0.7f + Abs(outN * 0.7f));
+            Letters(mb, letterSub, word.Length > 4 ? word.Substring(0, 4) : word, sc + along * 0.035f, outN, along, 0.22f, 0.02f);
+            Letters(mb, letterSub, word.Length > 4 ? word.Substring(0, 4) : word, sc - along * 0.035f, -outN, -along, 0.22f, 0.02f);
+        }
+    }
+
+    /// <summary>Landings with railings up one wall, straight flights between them, a ladder at the bottom.</summary>
+    static void FireEscape(Kit mb, Vector3 o, Vector3 along, Vector3 outN, float len, float h, System.Random rnd)
+    {
+        float x0 = 1.2f + (float)rnd.NextDouble() * (len - 6.5f);
+        int floors = Mathf.FloorToInt((h - GroundFloorH - 1f) / FloorH);
+        Vector3 up = Vector3.up;
+        for (int fl = 0; fl <= floors; fl++)
+        {
+            float y = GroundFloorH + fl * FloorH - 0.35f;
+            if (y > h - 1f) break;
+            Vector3 lc = o + along * (x0 + 1.2f) + up * y + outN * 0.55f;
+            mb.Box(Metal, lc, Abs(along * 2.4f) + up * 0.06f + Abs(outN * 1.05f));                       // landing
+            mb.Box(Metal, lc + outN * 0.5f + up * 0.5f, Abs(along * 2.4f) + up * 0.04f + Abs(outN * 0.04f)); // front rail
+            foreach (var e in new[] { -1.18f, 1.18f })
+            {
+                mb.Box(Metal, lc + along * e + outN * 0.5f + up * 0.25f, Abs(along * 0.04f) + up * 0.5f + Abs(outN * 0.04f));
+                mb.Box(Metal, lc + along * e + up * 0.5f, Abs(along * 0.04f) + up * 0.04f + Abs(outN * 1.0f));   // side rail
+            }
+            // brackets into the wall
+            foreach (var e in new[] { -0.9f, 0.9f }) mb.Box(Metal, lc + along * e - up * 0.25f - outN * 0.2f, Abs(along * 0.05f) + up * 0.05f + Abs(outN * 0.7f));
+            if (fl < floors && GroundFloorH + (fl + 1) * FloorH - 0.35f <= h - 1f)
+            {
+                // a flight up to the next landing, beside this one
+                Vector3 a = o + along * (x0 + 2.4f) + up * y + outN * 0.55f;
+                Vector3 b = a + along * 1.9f + up * FloorH;
+                Vector3 mid = (a + b) / 2f, dir = (b - a).normalized;
+                var q = Quaternion.LookRotation(outN, Vector3.Cross(outN, dir));
+                // (BoxRot's local x follows the first axis of q's basis: build it explicitly)
+                Vector3 X = dir * ((b - a).magnitude / 2f), Y = Vector3.Cross(outN, dir).normalized * 0.04f, Z = outN * 0.4f;
+                StairBox(mb, Metal, mid, X, Y, Z);
+                mb.Box(Metal, mid + outN * 0.35f, Abs(along * 0.04f) + up * (FloorH + 0.6f) + Abs(outN * 0.04f)); // handrail post
+            }
+            if (fl == 0) mb.Box(Metal, lc - up * 1.3f + outN * 0.3f, Abs(along * 0.5f) + up * 2.4f + Abs(outN * 0.05f)); // drop ladder
+        }
+    }
+
+    static void StairBox(Kit mb, int sub, Vector3 c, Vector3 X, Vector3 Y, Vector3 Z)
+    {
+        void F(Vector3 nrm, Vector3 u, Vector3 w) { Vector3 o = c + nrm; mb.Quad(sub, o - u - w, o + u - w, o + u + w, o - u + w, nrm); }
+        F(X, Y, Z); F(-X, Y, Z); F(Y, X, Z); F(-Y, X, Z); F(Z, X, Y); F(-Z, X, Y);
+    }
+
+    /// <summary>A big rooftop sign on two posts.</summary>
+    static void Billboard(Kit mb, float w, float d, float h, System.Random rnd)
+    {
+        bool alongX = w >= d;
+        Vector3 along = alongX ? Vector3.right : Vector3.forward, outN = alongX ? Vector3.back : Vector3.left;
+        float span = Mathf.Min(alongX ? w : d, 7f) - 1f;
+        Vector3 c = Vector3.up * (h + 2.6f) - outN * ((alongX ? d : w) / 2f - 1.2f);
+        foreach (var e in new[] { -span / 2f + 0.4f, span / 2f - 0.4f })
+            mb.Box(Metal, c + along * e - Vector3.up * 1.1f, Abs(along * 0.14f) + Vector3.up * 3f + Abs(outN * 0.14f));   // (from the roof up to the panel)
+        int bg = new[] { Accent, TrimLight, Wood }[rnd.Next(3)];
+        mb.Box(bg, c, Abs(along * span) + Vector3.up * 2.2f + Abs(outN * 0.1f));
+        mb.Box(TrimDark, c - outN * 0.02f, Abs(along * (span + 0.16f)) + Vector3.up * 2.36f + Abs(outN * 0.06f));
+        string word = BillWords[rnd.Next(BillWords.Length)];
+        Letters(mb, bg == TrimLight ? TrimDark : TrimLight, word, c + outN * 0.06f, along, outN, Mathf.Min(1.3f, span / (word.Length * 0.9f)), 0.04f);
+        mb.Box(Metal, c + Vector3.up * 1.3f + outN * 0.3f, Abs(along * (span + 0.2f)) + Vector3.up * 0.06f + Abs(outN * 0.5f)); // lamp hood
     }
 
     /// <summary>A horizontal band of trim wrapping one facade (outset from the wall).</summary>
@@ -329,7 +492,7 @@ public class CityGenerator : MonoBehaviour
             {
                 Vector2 c = new Vector2(gx * pitch + (float)(rnd.NextDouble() - 0.5) * 3f, gz * pitch + (float)(rnd.NextDouble() - 0.5) * 3f);
                 if (c.magnitude > 165f || rnd.NextDouble() < 0.18) continue;
-                float w = 10f + (float)rnd.NextDouble() * 8f, d = 10f + (float)rnd.NextDouble() * 8f;
+                float w = 9f + (float)rnd.NextDouble() * 5f, d = 9f + (float)rnd.NextDouble() * 5f;   // (leaves room for traffic + pavements in the 24 m grid)
                 float r = Mathf.Max(w, d) * 0.72f;
                 bool ok = true;
                 foreach (var (ac, ar) in avoid) if (Vector2.Distance(c, ac) < ar + r) { ok = false; break; }
@@ -390,6 +553,19 @@ public class CityGenerator : MonoBehaviour
             mb.BoxRot(TrimLight, c, size, q);
             cols.Add((c, size, q));
         }
+        // ...and a kerb of pavement around every filler building too
+        foreach (Transform f in parent)
+        {
+            if (!f.name.StartsWith("Filler_")) continue;
+            BoxCollider body = null;
+            foreach (var bc in f.GetComponentsInChildren<BoxCollider>()) if (bc.size.y > 4f && (body == null || bc.size.x * bc.size.z > body.size.x * body.size.z)) body = bc;
+            if (body == null) continue;
+            var q = Quaternion.Euler(0f, f.eulerAngles.y, 0f);
+            Vector3 c = new Vector3(f.position.x, 0.075f, f.position.z);
+            Vector3 size = new Vector3(body.size.x + 3f, 0.15f, body.size.z + 3f);
+            mb.BoxRot(TrimLight, c, size, q);
+            cols.Add((c, size, q));
+        }
         // Dashed lane markings down the middle of the grid streets, and lamp posts at the corners.
         var marks = new Kit(10);
         var hosp = GameObject.Find("Hospital");
@@ -434,7 +610,7 @@ public class CityGenerator : MonoBehaviour
     }
 
     /// <summary>Is this ground point under (or right beside) one of the gameplay blocks?</summary>
-    static bool UnderBlock(Transform env, Vector2 p)
+    public static bool UnderBlock(Transform env, Vector2 p)
     {
         foreach (Transform b in env)
         {
@@ -468,7 +644,7 @@ public class CityGenerator : MonoBehaviour
     static Mesh Save(Mesh m, string name) => m; // generated at load: nothing stored
 
     /// <summary>Flat-shaded mesh builder with per-material submeshes and UVs in metres (2 m per texture tile on walls).</summary>
-    class Kit
+    public class Kit
     {
         readonly List<Vector3> v = new(); readonly List<Vector3> n = new(); readonly List<Vector2> uv = new();
         readonly List<int>[] subs;

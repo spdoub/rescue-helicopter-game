@@ -40,13 +40,49 @@ def to_b(v):  # Unity local -> Blender
     return Vector((-v[0], -v[2], v[1]))
 
 GROUPS = {}
+MOVING = ("Cyclic", "Collective", "PedalL", "PedalR")
 def group(name, parent=None):
+    """Everything sits directly under the root (nested empties import with a twist); only the moving
+    parts get their own empty, and those are merged into single meshes at export."""
     if name in GROUPS: return GROUPS[name]
+    if name != "Interior" and name not in MOVING:
+        GROUPS[name] = group("Interior")
+        return GROUPS[name]
     e = bpy.data.objects.new(name, None)
     bpy.context.scene.collection.objects.link(e)
-    if parent: e.parent = group(parent)
+    if name != "Interior": e.parent = group("Interior")
     GROUPS[name] = e
     return e
+
+def merge_group(name):
+    """Join every mesh under a moving group into one mesh named after it, origin at the group's pivot;
+    its markers become plain children of the root (Unity re-parents them to the moving mesh)."""
+    g = group(name)
+    origin = g.location.copy()
+    bm = bmesh.new(); mats = []
+    kids = [o for o in bpy.data.objects if o.parent == g]
+    for o in kids:
+        if o.type != 'MESH':
+            o.parent = group("Interior"); o.location = origin + o.location
+            continue
+        me = o.data; base = {}
+        for mi, m in enumerate(me.materials):
+            if m not in mats: mats.append(m)
+            base[mi] = mats.index(m)
+        vs = [bm.verts.new(v.co + o.location) for v in me.vertices]
+        for p in me.polygons:
+            try:
+                f = bm.faces.new([vs[i] for i in p.vertices]); f.material_index = base.get(p.material_index, 0); f.smooth = False
+            except ValueError: pass
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    for m in mats: me.materials.append(m)
+    for p in me.polygons: p.use_smooth = False
+    for o in kids:
+        if o.type == 'MESH': bpy.data.objects.remove(o, do_unlink=True)
+    bpy.data.objects.remove(g, do_unlink=True); del GROUPS[name]
+    o = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(o)
+    o.parent = group("Interior"); o.location = origin
+    return o
 
 def unity_rot(rx=0, ry=0, rz=0):
     # Unity order: Z, then X, then Y. Standard rotation maths on Unity coordinates gives exactly
@@ -173,9 +209,9 @@ def build():
 
     # ---------------------------------------------------------------- bulkhead (cabin side of cockpit)
     for s, n in ((-1, "L"), (1, "R")):
-        box(f"Bulkhead_{n}", (s * 0.655, 1.77, 1.46), (0.55, 1.64, 0.05), "PadCream", "Cabin")
-        box(f"BulkheadTrim_{n}", (s * 0.385, 1.77, 1.46), (0.05, 1.64, 0.07), "HullRed", "Cabin")
-    box("BulkheadHeader", (0, 2.52, 1.46), (0.72, 0.2, 0.05), "PadCream", "Cabin")
+        box(f"Bulkhead_{n}", (s * 0.695, 1.77, 1.46), (0.47, 1.64, 0.05), "PadCream", "Cabin")
+        box(f"BulkheadTrim_{n}", (s * 0.44, 1.77, 1.46), (0.05, 1.64, 0.07), "HullRed", "Cabin")
+    box("BulkheadHeader", (0, 2.52, 1.46), (0.84, 0.2, 0.05), "PadCream", "Cabin")
     tape("BulkTape1", (-0.62, 2.2, 1.43), 0.3, 25, "Cabin")
     tape("BulkTape2", (-0.6, 2.2, 1.43), 0.2, -35, "Cabin")
     tape("BulkTape3", (0.55, 1.2, 1.43), 0.22, 10, "Cabin")
@@ -187,11 +223,11 @@ def build():
     for k, x in enumerate((-0.55, 0.0, 0.55)):
         box(f"BenchSeat_{k}", (x, 1.36, -0.27), (0.5, 0.1, 0.4), "Cushion", "Cabin", bevel=0.03)
         box(f"BenchBack_{k}", (x, 1.72, -0.45), (0.5, 0.6, 0.08), "Cushion", "Cabin", rot=(-6, 0, 0), bevel=0.03)
-        for sx in (-0.13, 0.13):  # shoulder straps
-            box(f"Strap_{k}_{sx}", (x + sx, 1.62, -0.4), (0.05, 0.62, 0.012), "Orange", "Cabin", rot=(-6, 0, 0), bevel=0.003)
-        box(f"LapStrap_{k}", (x, 1.42, -0.1), (0.46, 0.05, 0.012), "Orange", "Cabin", rot=(70, 0, 0), bevel=0.003)
+        for sx in (-0.13, 0.13):  # shoulder straps, lying flat on the backrest
+            box(f"Strap_{k}_{sx}", (x + sx, 1.62, -0.405), (0.05, 0.6, 0.012), "Orange", "Cabin", rot=(-6, 0, 0), bevel=0.003)
+        box(f"LapStrap_{k}", (x, 1.415, -0.2), (0.46, 0.012, 0.05), "Orange", "Cabin", bevel=0.003)   # lap belt lying across the cushion
         marker(f"M_BenchSeat_{k}", (x, 1.41, -0.22))  # where a rescued survivor sits (faces forward)
-        box(f"Buckle_{k}", (x, 1.42, -0.09), (0.07, 0.06, 0.02), "Metal", "Cabin", rot=(70, 0, 0), bevel=0.005)
+        box(f"Buckle_{k}", (x, 1.425, -0.2), (0.07, 0.02, 0.06), "Metal", "Cabin", bevel=0.005)
 
     # ---------------------------------------------------------------- cargo net on the rear wall (upper left) with bags
     for i in range(6):
@@ -305,7 +341,7 @@ def build():
         box(f"{n}Headrest", (x, 2.18, 1.56), (0.3, 0.2, 0.1), "Seat", "Cockpit", rot=(-10, 0, 0), bevel=0.04)
         for sx in (-0.11, 0.11):
             box(f"{n}Harness_{sx}", (x + sx, 1.78, 1.69), (0.055, 0.66, 0.012), "Orange" if n == "CoPilot" else "Grey", "Cockpit", rot=(-10, 0, 0), bevel=0.003)
-        box(f"{n}HarnessBuckle", (x, 1.4, 2.08), (0.09, 0.09, 0.02), "Metal", "Cockpit", rot=(60, 0, 0), bevel=0.01)
+        box(f"{n}HarnessBuckle", (x, 1.355, 2.02), (0.09, 0.02, 0.09), "Metal", "Cockpit", bevel=0.01)   # flat on the cushion
         tape(f"{n}SeatTape", (x + 0.12, 1.9, 1.59), 0.16, 30, "Cockpit")
         marker(f"M_{n}Seat", (x, 0.95, 1.9))
     marker("M_PilotEye", (0.45, 1.98, 1.95))
@@ -334,29 +370,28 @@ def build():
         box(f"{n}Arm", (x, F + 0.1, 2.9), (0.03, 0.14, 0.03), "Metal", n, bevel=0.006, pivot=pp)
         box(f"{n}Pad", (x, F + 0.16, 2.86), (0.1, 0.03, 0.16), "Black", n, rot=(-55, 0, 0), bevel=0.01, pivot=pp)
         group(n).location = to_b(pp)
-    for n in ("Cyclic", "Collective", "PedalL", "PedalR"):
-        group(n).parent = group("Interior")
+    for n in MOVING: merge_group(n)
 
     # ---------------------------------------------------------------- rescue hoist (outside, above the right door)
     # Bolted to the side of the engine deck; the boom sticks out past the door so the cable hangs
     # clear of the sliding door. The cable + hook are built at runtime from M_HoistTip.
     hz = 0.85
-    box("HoistMount", (0.73, 2.44, hz), (0.05, 0.3, 0.34), "DarkGrey", "Hoist", bevel=0.015)
+    HX, HY = 0.19, 0.08   # sits on the body's roof curve (see build_body.py), clear of the door rail
+    box("HoistMount", (0.73 + HX, 2.44 + HY, hz), (0.05, 0.3, 0.34), "DarkGrey", "Hoist", bevel=0.015)
     for dz in (-0.12, 0.12):
         for dy in (-0.1, 0.1):
-            cyl(f"HoistBolt_{dz}_{dy}", (0.76, 2.44 + dy, hz + dz), 0.014, 0.02, "Metal", "Hoist", rot=(0, 0, 90), segs=6)
-    box("HoistBoom", (1.05, 2.53, hz), (0.62, 0.09, 0.11), "Yellow", "Hoist", bevel=0.02)
-    tube("HoistBrace", [(0.75, 2.3, hz), (1.22, 2.49, hz)], 0.022, "Grey", "Hoist")
-    cyl("HoistDrum", (1.38, 2.5, hz), 0.11, 0.3, "DarkGrey", "Hoist", rot=(90, 0, 0), segs=14)
-    cyl("HoistDrumCapF", (1.38, 2.5, hz + 0.16), 0.08, 0.03, "Metal", "Hoist", rot=(90, 0, 0), segs=10)
-    cyl("HoistDrumCapB", (1.38, 2.5, hz - 0.16), 0.08, 0.03, "Metal", "Hoist", rot=(90, 0, 0), segs=10)
-    box("HoistMotor", (1.21, 2.62, hz), (0.16, 0.1, 0.14), "Grey", "Hoist", bevel=0.02)
-    cyl("HoistSheave", (1.4, 2.39, hz), 0.035, 0.04, "Black", "Hoist", rot=(90, 0, 0), segs=10)
-    box("HoistStripe0", (0.86, 2.53, hz), (0.05, 0.095, 0.115), "Black", "Hoist", rot=(0, 0, 35), bevel=0)
-    box("HoistStripe1", (0.98, 2.53, hz), (0.05, 0.095, 0.115), "Black", "Hoist", rot=(0, 0, 35), bevel=0)
-    tape("HoistTape", (1.12, 2.53, hz + 0.058), 0.2, -20, "Hoist")
-    marker("M_HoistTip", (1.4, 2.36, hz))
-    group("Hoist").parent = group("Interior")
+            cyl(f"HoistBolt_{dz}_{dy}", (0.76 + HX, 2.44 + HY + dy, hz + dz), 0.014, 0.02, "Metal", "Hoist", rot=(0, 0, 90), segs=6)
+    box("HoistBoom", (1.05 + HX, 2.53 + HY, hz), (0.62, 0.09, 0.11), "Yellow", "Hoist", bevel=0.02)
+    tube("HoistBrace", [(0.75 + HX, 2.3 + HY, hz), (1.22 + HX, 2.49 + HY, hz)], 0.022, "Grey", "Hoist")
+    cyl("HoistDrum", (1.38 + HX, 2.5 + HY, hz), 0.11, 0.3, "DarkGrey", "Hoist", rot=(90, 0, 0), segs=14)
+    cyl("HoistDrumCapF", (1.38 + HX, 2.5 + HY, hz + 0.16), 0.08, 0.03, "Metal", "Hoist", rot=(90, 0, 0), segs=10)
+    cyl("HoistDrumCapB", (1.38 + HX, 2.5 + HY, hz - 0.16), 0.08, 0.03, "Metal", "Hoist", rot=(90, 0, 0), segs=10)
+    box("HoistMotor", (1.21 + HX, 2.62 + HY, hz), (0.16, 0.1, 0.14), "Grey", "Hoist", bevel=0.02)
+    cyl("HoistSheave", (1.4 + HX, 2.39 + HY, hz), 0.035, 0.04, "Black", "Hoist", rot=(90, 0, 0), segs=10)
+    box("HoistStripe0", (0.86 + HX, 2.53 + HY, hz), (0.05, 0.095, 0.115), "Black", "Hoist", rot=(0, 0, 35), bevel=0)
+    box("HoistStripe1", (0.98 + HX, 2.53 + HY, hz), (0.05, 0.095, 0.115), "Black", "Hoist", rot=(0, 0, 35), bevel=0)
+    tape("HoistTape", (1.12 + HX, 2.53 + HY, hz + 0.058), 0.2, -20, "Hoist")
+    marker("M_HoistTip", (1.4 + HX, 2.36 + HY, hz))
 
     # ---------------------------------------------------------------- export
     for o in bpy.data.objects: o.select_set(True)

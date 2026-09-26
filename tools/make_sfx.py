@@ -21,6 +21,8 @@ SFX = {
     "crash_thud": ("Helicopter hull slamming into a brick wall, heavy metal crunch and thud, short", 1.2, False),
     "rotor_strike": ("Helicopter rotor blades striking concrete, violent clattering metal chopping sparks, short", 1.2, False),
     "damage_alarm": ("Cockpit warning alarm, urgent repeating electronic beep beep beep, constant", 2.0, True),
+    "city_ambience": ("Distant city street ambience on a warm evening, light traffic hum, a far-away car horn, a faint siren far off, a few pigeons, steady and calm", 12.0, True),
+    "car_horn": ("Single short car horn honk from a small car, city street, close", 0.8, False),
     "delivered_jingle": ("Short cheerful cartoon success jingle, bouncy brass and xylophone, cash register ding at the end", 2.5, False),
 }
 

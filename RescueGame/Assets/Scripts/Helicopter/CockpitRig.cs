@@ -68,6 +68,9 @@ public class CockpitRig : MonoBehaviour
         if (pedalR) pedalRRest = heli.InverseTransformPoint(pedalR.position);
         GripCyclic = Find("M_GripCyclic");
         GripCollective = Find("M_GripCollective");
+        // the grip markers ride on the sticks
+        if (GripCyclic && cyclic) GripCyclic.SetParent(cyclic, true);
+        if (GripCollective && collective) GripCollective.SetParent(collective, true);
 
         BuildGauges();
         BuildLights();

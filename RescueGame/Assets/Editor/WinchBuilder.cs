@@ -164,6 +164,15 @@ public static class WinchBuilder
         board.material = painted;
         EditorUtility.SetDirty(board);
 
+        // city life: traffic, people, street furniture, ambience (built at load by CityLife)
+        var cityGo = GameObject.Find("City");
+        if (cityGo)
+        {
+            var life = cityGo.GetComponent<CityLife>(); if (!life) life = cityGo.AddComponent<CityLife>();
+            life.paintMaterial = painted; life.smokeMaterial = smoke; life.ambience = C("city_ambience"); life.horn = C("car_horn");
+            EditorUtility.SetDirty(life);
+        }
+
         Debug.Log("[Audio] helicopter sounds wired: " + (a.rotorLoop && a.winchMotor && a.doorSlide && a.hookClank && a.deliveredJingle));
     }
 
