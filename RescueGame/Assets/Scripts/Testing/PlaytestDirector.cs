@@ -217,6 +217,10 @@ public class PlaytestDirector : MonoBehaviour
             if (flat.sqrMagnitude > 0.0001f)
                 d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
             bool done = cond(d);
+            // Thrown out of the door and dangling by the grab rope? Haul back in (hold W = climb the rope) and hop up.
+            var body = d.Me.GetComponent<CrewBody>();
+            bool dangling = !d.Me.OnHelicopter.Value && body.IsHolding && !body.IsGrounded;
+            if (dangling && !done) { NetworkPlayer.BotOverride = new PlayerInput { moveZ = 1f, grabLeft = true }; if (e % 1f < 0.05f) NetworkPlayer.BotJumps = 1; return false; }
             NetworkPlayer.BotOverride = new PlayerInput { winch = done ? (sbyte)0 : dir, grabLeft = true };
             return done;
         }

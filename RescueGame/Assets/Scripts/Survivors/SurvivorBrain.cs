@@ -234,7 +234,14 @@ public class SurvivorBrain : NetworkBehaviour
         {
             var args = System.Environment.GetCommandLineArgs();
             int at = System.Array.IndexOf(args, "-startwild");
-            if (at >= 0) { forceKind = at + 1 < args.Length && int.TryParse(args[at + 1], out int k) ? k : 0; if (FindWildSpot(out Vector3 s, out byte pl)) { Place.Value = pl; MoveTo(s); } forceKind = -1; }
+            if (at >= 0)
+            {
+                forceKind = at + 1 < args.Length && int.TryParse(args[at + 1], out int k) ? k : 0;
+                bool ok = FindWildSpot(out Vector3 s, out byte pl);
+                if (ok) { Place.Value = pl; MoveTo(s); }
+                Debug.Log($"[Survivor] -startwild {forceKind} for {displayName}: {(ok ? s.ToString("F1") + " (" + PlaceNames[pl] + ")" : "no spot found")}");
+                forceKind = -1;
+            }
         }
     }
 
@@ -688,7 +695,7 @@ public class SurvivorBrain : NetworkBehaviour
             switch (kind)
             {
                 case 1: x = Random.Range(-380f, 380f); z = Random.Range(-500f, -320f); break;   // beach
-                case 2: x = Random.Range(-300f, 300f); z = Random.Range(300f, 520f); break;     // mountains
+                case 2: x = Random.Range(-350f, 350f); z = Random.Range(260f, 540f); break;     // mountains
                 case 3: x = Random.Range(-640f, -480f); z = Random.Range(-220f, 220f); break;   // cliff top
                 case 4: x = 470f + Random.Range(-160f, 160f); z = 120f + Random.Range(-160f, 160f); break; // lake
                 default: x = Random.Range(-450f, 450f); z = Random.Range(-260f, 280f); break;  // hills / forest
@@ -697,13 +704,14 @@ public class SurvivorBrain : NetworkBehaviour
             float h = isl.Height(x, z);
             if (h < IslandGenerator.SeaLevel + 1.5f) continue;
             if (kind == 1 && h > IslandGenerator.SeaLevel + 4f) continue;      // beach: right by the water
-            if (kind == 2 && h < 60f) continue;                                // mountain: properly up
+            if (kind == 2 && h < 40f) continue;                                // mountain: properly up
             if (kind == 4 && Vector2.Distance(new Vector2(x, z), new Vector2(470f, 120f)) > 130f) continue;
             // stand on the real terrain, on something walkable, with the sky open above
             if (!Physics.Raycast(new Vector3(x, h + 30f, z), Vector3.down, out RaycastHit hit, 60f, mask, QueryTriggerInteraction.Ignore)) continue;
-            if (hit.normal.y < 0.9f) continue;
+            if (hit.normal.y < (kind == 2 ? 0.8f : 0.9f)) continue;            // (a mountain shoulder can be a bit sloped)
             Vector3 feet = hit.point + Vector3.up * 0.05f;
-            if (Physics.CheckBox(feet + Vector3.up * 1.1f, new Vector3(2.2f, 0.95f, 2.2f), Quaternion.identity, mask, QueryTriggerInteraction.Ignore)) continue;
+            // room to stand: a box held clear of the slope (the ground itself rises inside a low box on a hillside)
+            if (Physics.CheckBox(feet + Vector3.up * 1.9f, new Vector3(1.6f, 0.7f, 1.6f), Quaternion.identity, mask, QueryTriggerInteraction.Ignore)) continue;
             if (Physics.Raycast(feet + Vector3.up * 2f, Vector3.up, 30f, mask, QueryTriggerInteraction.Ignore)) continue;
             spot = feet; place = (byte)kind;
             return true;
