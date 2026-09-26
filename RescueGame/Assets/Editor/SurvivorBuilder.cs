@@ -47,6 +47,17 @@ public static class SurvivorBuilder
         { "Head", "head_end" }, { "Spine01", "Spine02" }, { "Hips", "Spine01" },
     };
 
+    static readonly Spec BackseatPilot = new()
+    {
+        id = "BackseatPilot", displayName = "Backseat Pilot", kind = SurvivorBrain.Kind.BackseatPilot,
+        model = "Assets/Art/Characters/BackseatPilot/BackseatPilot.fbx", texture = "Assets/Art/Characters/BackseatPilot/BackseatPilot_BaseColor.png",
+        voiceDir = "Assets/Audio/Survivors/backseat", outPath = "Assets/Prefabs/Survivor_BackseatPilot.prefab",
+        height = 1.7f, eye = 1.5f, walk = 2.6f, sprint = 4f, jump = 4.6f, grip = 9000f, hardLanding = 12f, mass = 85f, payBonus = 200,
+    };
+
+    [MenuItem("Tools/Rescue Heli/Build Survivor Backseat Pilot")]
+    public static void BuildBackseat() => Build(BackseatPilot);
+
     [MenuItem("Tools/Rescue Heli/Build Survivor Grandma")]
     public static void Build() => Build(Grandma);
 

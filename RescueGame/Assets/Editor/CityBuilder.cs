@@ -20,7 +20,8 @@ public static class CityBuilder
     // submeshes / materials
     const int Brick = 0, TrimLight = 1, TrimDark = 2, Glass = 3, Frame = 4, Roof = 5, GlassLit = 6, Metal = 7, Wood = 8, Accent = 9;
     static Material[] mats;
-    static Vector3 keepClear2 = Vector3.one * 9999f;   // a second pickup spot to keep clear (Recliner Guy)
+    static Vector3 keepClear2 = Vector3.one * 9999f;   // more pickup spots to keep clear (Recliner Guy, Backseat Pilot)
+    static Vector3 keepClear3 = Vector3.one * 9999f;
 
     [MenuItem("Tools/Rescue Heli/Build City")]
     public static void Build()
@@ -40,6 +41,8 @@ public static class CityBuilder
         Vector3 keepClear = grandma ? grandma.transform.position : Vector3.one * 9999f;
         var chairGo = GameObject.Find("ReclinerChair");
         keepClear2 = chairGo ? chairGo.transform.position : Vector3.one * 9999f;
+        var bpGo = GameObject.Find("BackseatPilot");
+        keepClear3 = bpGo ? bpGo.transform.position : Vector3.one * 9999f;
 
         int n = 0;
         foreach (Transform b in env)
@@ -163,6 +166,8 @@ public static class CityBuilder
         Vector3 clearLocal2 = Quaternion.Inverse(rot) * (keepClear2 - basePos);
         bool second = Mathf.Abs(clearLocal2.y - h) < 3f && Mathf.Abs(clearLocal2.x) < w && Mathf.Abs(clearLocal2.z) < d;
         if (second) { clearLocal = clearLocal2; }
+        Vector3 clearLocal3 = Quaternion.Inverse(rot) * (keepClear3 - basePos);
+        if (Mathf.Abs(clearLocal3.y - h) < 3f && Mathf.Abs(clearLocal3.x) < w && Mathf.Abs(clearLocal3.z) < d) clearLocal = clearLocal3;
         RoofProps(mb, cols, w, d, h, rnd, new Vector2(clearLocal.x, clearLocal.z), Mathf.Abs(clearLocal.y - h) < 3f ? 5.5f : 0f);
 
         var mf = go.AddComponent<MeshFilter>();

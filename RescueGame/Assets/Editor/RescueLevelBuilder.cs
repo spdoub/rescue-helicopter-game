@@ -16,7 +16,7 @@ public static class RescueLevelBuilder
     [MenuItem("Tools/Rescue Heli/Build Rescue Level")]
     public static void Build()
     {
-        foreach (var n in new[] { "Grandma", "Hospital", "HospitalPad", "ReclinerChair", "ReclinerGuy" }) { var o = GameObject.Find(n); if (o) Object.DestroyImmediate(o); }
+        foreach (var n in new[] { "Grandma", "Hospital", "HospitalPad", "ReclinerChair", "ReclinerGuy", "BackseatPilot" }) { var o = GameObject.Find(n); if (o) Object.DestroyImmediate(o); }
 
         // ---- the survivor, on the roof, on the side facing the helipad
         var roof = GameObject.Find("Environment/Block_3").GetComponent<Renderer>().bounds;
@@ -38,6 +38,18 @@ public static class RescueLevelBuilder
         guy.GetComponent<SurvivorBrain>().chair = chair.GetComponent<Recliner>();
         var seatT = chair.GetComponent<Recliner>().seatPoint;
         guy.transform.SetPositionAndRotation(seatT.position + Vector3.up * guy.GetComponent<CapsuleCollider>().height / 2f, seatT.rotation);
+
+        // ---- Backseat Pilot on the tall roof of Block_0
+        var bpPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Survivor_BackseatPilot.prefab");
+        if (bpPrefab)
+        {
+            var b0 = GameObject.Find("Environment/Block_0").GetComponent<Collider>().bounds;
+            var bp = (GameObject)PrefabUtility.InstantiatePrefab(bpPrefab);
+            bp.name = "BackseatPilot";
+            Vector3 toOrigin = -new Vector3(b0.center.x, 0f, b0.center.z).normalized;
+            Vector3 p0 = new Vector3(b0.center.x, b0.max.y + bp.GetComponent<CapsuleCollider>().height / 2f + 0.05f, b0.center.z) + toOrigin * 2.5f;
+            bp.transform.SetPositionAndRotation(p0, Quaternion.LookRotation(toOrigin));
+        }
 
         // ---- the hospital
         var root = new GameObject("Hospital").transform;

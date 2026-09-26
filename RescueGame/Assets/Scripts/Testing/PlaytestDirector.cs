@@ -231,6 +231,26 @@ public class PlaytestDirector : MonoBehaviour
         public override bool Tick(PlaytestDirector d, float e) { act(d); return true; }
     }
 
+    /// <summary>Walk up to someone, grab them with both hands and back off (drag them) until a condition holds.</summary>
+    class Chase : Step
+    {
+        readonly string label; readonly Func<PlaytestDirector, Transform> who; readonly Func<PlaytestDirector, bool> cond;
+        public Chase(string label, Func<PlaytestDirector, Transform> who, Func<PlaytestDirector, bool> cond, float timeout) { this.label = label; this.who = who; this.cond = cond; this.timeout = timeout; }
+        public override string Name => label;
+        public override bool Tick(PlaytestDirector d, float e)
+        {
+            if (cond(d)) { NetworkPlayer.BotOverride = default(PlayerInput); return true; }
+            var t = who(d);
+            Vector3 to = t.position + Vector3.up * 0.2f - d.Me.GetComponent<CrewBody>().Eye;
+            Vector3 flat = new Vector3(to.x, 0f, to.z);
+            if (flat.sqrMagnitude > 0.0001f) d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
+            var body = d.Me.GetComponent<CrewBody>();
+            bool holding = body.Left.Holding || body.Right.Holding;
+            NetworkPlayer.BotOverride = new PlayerInput { moveZ = holding ? -1f : (flat.magnitude > 0.9f ? 1f : 0f), grabLeft = true, grabRight = true };
+            return false;
+        }
+    }
+
     class Jump : Step
     {
         public override bool Tick(PlaytestDirector d, float e) { NetworkPlayer.BotJumps = 1; return true; }
@@ -375,6 +395,24 @@ public class PlaytestDirector : MonoBehaviour
 
             case "rescue_recliner": // same, for Recliner Guy (pilot bot "rescue-recliner")
                 RescueRounds(SurvivorBrain.Kind.ReclinerGuy, 1, door, cabin);
+                break;
+
+            case "backseat_meddle": // pick up the Backseat Pilot, hover; when he goes for the controls, grab him and pull him back
+            {
+                SurvivorBrain G() => SurvivorBrain.Find(SurvivorBrain.Kind.BackseatPilot);
+                RescueRounds(SurvivorBrain.Kind.BackseatPilot, 0, door, cabin);  // board + winch box only
+                NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
+                Add(new WinchUntil("over the survivor", 0, d => { var g = G(); Vector3 tip = W(d).TipPosition, gp = g.transform.position; tip.y = gp.y = 0f; return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > gp.y + 4f; }, 60f));
+                Add(new WinchUntil("let the hook down", -1, d => W(d).HookEyePosition.y < G().transform.position.y + 0.6f || G().Current != SurvivorBrain.State.Waiting, 20f));
+                Add(new WinchUntil("survivor hooked", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
+                Add(new WinchUntil("reel them up", 1, d => G().Current == SurvivorBrain.State.Seated, 40f));
+                Add(new WinchUntil("he goes for the controls", 0, d => G().Current == SurvivorBrain.State.Meddling, 60f));
+                Add(new Chase("grab him and pull him back", d => G().transform, d => G().Current == SurvivorBrain.State.Seated, 20f));
+                break;
+            }
+
+            case "rescue_backseat": // same, for Backseat Pilot (pilot bot "rescue-backseat")
+                RescueRounds(SurvivorBrain.Kind.BackseatPilot, 1, door, cabin);
                 break;
 
             case "solo_hover": // one player: take off, climb, get out of the seat - the helicopter should hover on its own
@@ -534,6 +572,8 @@ public class PlaytestDirector : MonoBehaviour
         "takeoff-later" => t => new HelicopterInput { collective = t > 6f && t < 9f ? 1f : 0f },
         "rescue" => new RescuePilot().Tick,
         "rescue-recliner" => new RescuePilot(SurvivorBrain.Kind.ReclinerGuy).Tick,
+        "rescue-backseat" => new RescuePilot(SurvivorBrain.Kind.BackseatPilot).Tick,
+        "rescue-backseat-linger" => new RescuePilot(SurvivorBrain.Kind.BackseatPilot, 75f).Tick,
         _ => t => default,
     };
 

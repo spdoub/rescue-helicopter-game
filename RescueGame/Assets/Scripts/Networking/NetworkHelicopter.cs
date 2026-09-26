@@ -24,6 +24,10 @@ public class NetworkHelicopter : NetworkBehaviour
     public NetworkVariable<bool> DoorLeftOpen = new(true), DoorRightOpen = new(true);
     public bool DoorOpen(bool left) => left ? DoorLeftOpen.Value : DoorRightOpen.Value;
 
+    /// <summary>Host: someone who isn't the pilot is grabbing the controls (added on top of the pilot's).</summary>
+    public void MeddleFor(HelicopterInput meddle, float seconds) { Meddle = meddle; meddleUntil = Time.time + seconds; }
+    HelicopterInput Meddle; float meddleUntil;
+
     /// <summary>Host only.</summary>
     public void ToggleDoor(bool left)
     {
@@ -111,6 +115,14 @@ public class NetworkHelicopter : NetworkBehaviour
         {
             bool fresh = Time.time - lastInputTime < InputTimeout && PilotClientId.Value != NoPilot;
             var applied = fresh ? latestInput : HelicopterInput.None;
+            // A backseat pilot yanking on the controls from beside the pilot seat.
+            if (Time.time < meddleUntil)
+            {
+                applied.collective = Mathf.Clamp(applied.collective + Meddle.collective, -1f, 1f);
+                applied.pitch = Mathf.Clamp(applied.pitch + Meddle.pitch, -1f, 1f);
+                applied.roll = Mathf.Clamp(applied.roll + Meddle.roll, -1f, 1f);
+                applied.yaw = Mathf.Clamp(applied.yaw + Meddle.yaw, -1f, 1f);
+            }
             controller.SetInput(applied);
             var c = new Vector4(applied.collective, applied.pitch, applied.roll, applied.yaw);
             if ((c - ControlsSync.Value).sqrMagnitude > 0.0004f) ControlsSync.Value = c;

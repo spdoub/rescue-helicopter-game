@@ -11,7 +11,11 @@ public class RescuePilot
 
     readonly SurvivorBrain.Kind target;
     const float CruiseAltitude = 55f; // above the tallest buildings
-    public RescuePilot(SurvivorBrain.Kind target = SurvivorBrain.Kind.StrongGrandma) => this.target = target;
+    readonly float lingerAfterBoarding;
+    /// <param name="lingerAfterBoarding">Keep hovering this long after they're aboard before heading to the hospital (tests).</param>
+    public RescuePilot(SurvivorBrain.Kind target = SurvivorBrain.Kind.StrongGrandma, float lingerAfterBoarding = 0f)
+    { this.target = target; this.lingerAfterBoarding = lingerAfterBoarding; }
+    float seatedAt = -1f;
 
     Phase phase;
     float holdY; Vector3 holdXZ;
@@ -61,7 +65,9 @@ public class RescuePilot
                 if (phase == Phase.ToPickup && Flat(target - h.position).magnitude > 25f) target.y = Mathf.Max(holdY, CruiseAltitude);
                 if (phase == Phase.Hold) { target.x = holdXZ.x; target.z = holdXZ.z; }
                 if (phase == Phase.ToPickup && Flat(target - h.position).magnitude < 1.2f && vel.magnitude < 1f) { Next(Phase.Hold); holdXZ = target; }
-                if (survivor.Current == SurvivorBrain.State.Seated && since > 1f) Next(Phase.ToHospital);
+                bool aboard = survivor.Current == SurvivorBrain.State.Seated || survivor.Current == SurvivorBrain.State.Meddling;
+                if (aboard && seatedAt < 0f) seatedAt = Time.time;
+                if (aboard && since > 1f && Time.time - seatedAt >= lingerAfterBoarding) Next(Phase.ToHospital);
                 return FlyTo(h, target, phase == Phase.Hold ? 2f : 7f, 0f);
             }
 

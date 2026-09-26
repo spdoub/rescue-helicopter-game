@@ -41,6 +41,22 @@ SURVIVORS = {
             "Two stars. My remote fell out.", "One star. I'm suing. From this chair.",
         ],
     },
+    "backseat": {
+        "voice": "pNInz6obpgDQGcFmaJgB",  # "Adam" - dominant, firm: a know-it-all
+        "lines": [
+            "Finally! I've been timing you. Terrible.", "You're approaching too fast!", "Wind's from the west, genius!",
+            "Winch speed is way too slow!", "I'd have done this in half the time.", "Don't jerk the cable! Smooth!",
+            "In my day we flew with our knees.", "I have eleven hours in a simulator, you know.", "Check your mirrors. Helicopters have mirrors, right?",
+            "Easy! EASY!", "Who taught you to fly? A washing machine?", "I'm writing this down.",
+            "Too fast! TOO FAST!", "This isn't a race, hotshot!", "Easy on the bank angle, rookie.", "Level the wings! Or... blades!",
+            "Pull up! PULL UP!", "You're scraping the rooftops!", "You call that a hover?", "Steady! Steady! Steady!",
+            "Move over, let me show you how it's done!", "My aircraft!", "I've got it, I've got it!",
+            "Fine! FINE. Your funeral.", "Unhand me! I'm a professional!", "See? That's how it's done.", "You're welcome.",
+            "Five stars. I taught you well.", "Four stars. Almost as good as me.", "Three stars. Needed more of my input.",
+            "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less.",
+            "Hup! Textbook!", "Right. I'll be supervising.", "Adequate landing. Adequate.", "That was the winch's fault!",
+        ],
+    },
 }
 
 

@@ -72,6 +72,12 @@ public class RescueHud : MonoBehaviour
         {
             if (!s.IsSpawned) continue;
             string them = s.kind == SurvivorBrain.Kind.StrongGrandma ? "her" : "him";
+            if (s.Current == SurvivorBrain.State.Meddling)
+            {
+                Outlined(new Rect(26, y, 620, 30), $"- {s.displayName} is grabbing the controls!  Grab him (click) and pull him back!", objective);
+                y += 28f; anyoneAboard = true;
+                continue;
+            }
             string goal;
             switch (s.Current)
             {

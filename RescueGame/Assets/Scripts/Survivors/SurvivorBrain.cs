@@ -26,8 +26,8 @@ using UnityEngine;
 [RequireComponent(typeof(NetworkPlayer))]
 public class SurvivorBrain : NetworkBehaviour
 {
-    public enum State : byte { Waiting, Hooked, Boarding, Seated, Delivered }
-    public enum Kind : byte { StrongGrandma, ReclinerGuy }
+    public enum State : byte { Waiting, Hooked, Boarding, Seated, Delivered, Meddling }
+    public enum Kind : byte { StrongGrandma, ReclinerGuy, BackseatPilot }
 
     public Kind kind = Kind.StrongGrandma;
     public string displayName = "Grandma";
@@ -65,6 +65,8 @@ public class SurvivorBrain : NetworkBehaviour
     {
         public string[] waiting, hooked, yank, seated, rough, reviews; // reviews: 5 stars .. 1 star
         public string hup, settled, arrived, fell;
+        // Backseat Pilot: critiques that match what the helicopter is doing, and the takeover bit
+        public string[] fast, bank, low, hover, takeover, givesUp, satisfied;
     }
 
     static readonly Personality GrandmaLines = new()
@@ -89,7 +91,25 @@ public class SurvivorBrain : NetworkBehaviour
         hup = "Whoa whoa whoa!", settled = "Yeah, this'll do. Wake me when we land.", arrived = "Right here's fine. Don't touch the chair.", fell = "Aw, come on!",
     };
 
-    Personality L => kind == Kind.ReclinerGuy ? ReclinerLines : GrandmaLines;
+    static readonly Personality BackseatLines = new()
+    {
+        waiting = new[] { "Finally! I've been timing you. Terrible.", "You're approaching too fast!", "Wind's from the west, genius!" },
+        hooked = new[] { "Winch speed is way too slow!", "I'd have done this in half the time.", "Don't jerk the cable! Smooth!" },
+        yank = new string[0],
+        seated = new[] { "In my day we flew with our knees.", "I have eleven hours in a simulator, you know.", "Check your mirrors. Helicopters have mirrors, right?" },
+        rough = new[] { "Easy! EASY!", "Who taught you to fly? A washing machine?", "I'm writing this down." },
+        fast = new[] { "Too fast! TOO FAST!", "This isn't a race, hotshot!" },
+        bank = new[] { "Easy on the bank angle, rookie.", "Level the wings! Or... blades!" },
+        low = new[] { "Pull up! PULL UP!", "You're scraping the rooftops!" },
+        hover = new[] { "You call that a hover?", "Steady! Steady! Steady!" },
+        takeover = new[] { "Move over, let me show you how it's done!", "My aircraft!", "I've got it, I've got it!" },
+        givesUp = new[] { "Fine! FINE. Your funeral.", "Unhand me! I'm a professional!" },
+        satisfied = new[] { "See? That's how it's done.", "You're welcome." },
+        reviews = new[] { "Five stars. I taught you well.", "Four stars. Almost as good as me.", "Three stars. Needed more of my input.", "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less." },
+        hup = "Hup! Textbook!", settled = "Right. I'll be supervising.", arrived = "Adequate landing. Adequate.", fell = "That was the winch's fault!",
+    };
+
+    Personality L => kind switch { Kind.ReclinerGuy => ReclinerLines, Kind.BackseatPilot => BackseatLines, _ => GrandmaLines };
 
     /// <summary>The survivor of this kind in the scene (null if none).</summary>
     public static SurvivorBrain Find(Kind k)
@@ -131,8 +151,9 @@ public class SurvivorBrain : NetworkBehaviour
             case State.Waiting: Waiting(ref input); break;
             case State.Hooked: Hooked(ref input); break;
             case State.Boarding: Boarding(ref input, t); break;
-            case State.Seated: Seated(); break;
+            case State.Seated: if (kind == Kind.BackseatPilot) BackseatSeated(); else Seated(); break;
             case State.Delivered: Delivered(ref input, t); break;
+            case State.Meddling: Meddling(ref input, t); break;
         }
         return input;
     }
@@ -191,7 +212,7 @@ public class SurvivorBrain : NetworkBehaviour
         // The Strong Grandma bit: she hauls the cable (and the helicopter) down toward her
         // unless the crew is actively reeling her in.
         bool reelingIn = winch.Motion.Value > 0;
-        if (!reelingIn && winch.Length.Value > 1.5f && Time.time > nextYank)
+        if (L.yank.Length > 0 && !reelingIn && winch.Length.Value > 1.5f && Time.time > nextYank)
         {
             yankUntil = Time.time + yankSeconds;
             nextYank = Time.time + yankEvery;
@@ -282,6 +303,88 @@ public class SurvivorBrain : NetworkBehaviour
         foreach (var z in RescueZone.All) if (z.Contains(heli.transform.position)) { zone = z; return true; }
         return false;
     }
+
+    // ------------------------------------------------------------------ Backseat Pilot
+
+    float nextTakeover;
+
+    /// <summary>Critiques whatever the pilot is doing right now, and every so often goes to "help".</summary>
+    void BackseatSeated()
+    {
+        if (nextTakeover == 0f) nextTakeover = Time.time + Random.Range(25f, 40f);
+        if (Time.time > nextRemark)
+        {
+            var rb = heli.GetComponent<Rigidbody>();
+            Vector3 v = rb.linearVelocity; float speed = new Vector2(v.x, v.z).magnitude;
+            float bank = Vector3.Angle(heli.transform.up, Vector3.up);
+            bool low = !heli.GetComponent<HelicopterController>().IsLanded &&
+                       Physics.Raycast(heli.transform.position, Vector3.down, 4f, GameLayers.Gameplay & ~(1 << heli.gameObject.layer), QueryTriggerInteraction.Ignore);
+            string[] pick = low ? L.low : bank > 18f ? L.bank : speed > 14f ? L.fast
+                          : (speed < 2f && rb.angularVelocity.magnitude > 0.3f) ? L.hover : L.seated;
+            if (pick == L.bank || pick == L.low) RoughMoments++;
+            Say(Pick(pick), 3f);
+            nextRemark = Time.time + Random.Range(7f, 11f);
+        }
+
+        if (LandedAtDropOff(out _)) { Seated(); return; } // same way out as everyone else
+
+        // Takeover: unbuckle and march to the cockpit (only when airborne; he's not an idiot).
+        if (Time.time > nextTakeover && !heli.GetComponent<HelicopterController>().IsLanded)
+        {
+            Vector3 standAt = seat.position + heli.transform.forward * 0.45f + Vector3.up * 0.05f;
+            me.SetPassengerSeat(null, standAt);
+            Enter(State.Meddling);
+            Say(Pick(L.takeover), 3f);
+        }
+    }
+
+    /// <summary>Out of his seat: walks up to the pilot and yanks the controls until someone drags
+    /// him back (grabs him) or he's "shown them how it's done".</summary>
+    void Meddling(ref PlayerInput input, float t)
+    {
+        var myRb = GetComponent<Rigidbody>();
+        bool heldBack = false;
+        foreach (var b in FindObjectsByType<CrewBody>(FindObjectsSortMode.None))
+            if (b != body && ((b.Left.Holding && b.Left.body == myRb) || (b.Right.Holding && b.Right.body == myRb))) heldBack = true;
+
+        Vector3 cockpit = heli.transform.TransformPoint(new Vector3(0.15f, heli.cabinFloorHeight, 1.55f));
+        Vector3 to = Flat(cockpit - transform.position);
+        bool arrived = to.magnitude < 0.9f;
+        bool done = heldBack || t > 14f || (arrived && t - arrivedAt > 6f && arrivedAt > 0f) || LandedAtDropOff(out _);
+        if (!done)
+        {
+            input.yaw = Yaw(to.sqrMagnitude > 0.01f ? to : heli.transform.forward);
+            if (!arrived) input.moveZ = 1f;
+            else
+            {
+                if (arrivedAt <= 0f) arrivedAt = t;
+                input.grabLeft = input.grabRight = false;
+                input.pitch = 35f; // reaching for the stick
+                if (Time.time > nextMeddle)
+                {
+                    heli.MeddleFor(new HelicopterInput { pitch = Random.Range(-0.7f, 0.7f), roll = Random.Range(-0.8f, 0.8f), yaw = Random.Range(-0.6f, 0.6f), collective = Random.Range(-0.3f, 0.4f) }, 0.6f);
+                    nextMeddle = Time.time + 0.5f;
+                    if (Random.value < 0.25f) Say(Pick(L.takeover), 1.5f);
+                }
+            }
+            return;
+        }
+        // Back to his seat (on foot), then buckle up again.
+        if (returningSince <= 0f) { returningSince = Time.time; Say(heldBack ? Pick(L.givesUp) : Pick(L.satisfied), 3f); }
+        Vector3 toSeat = Flat(seat.position - transform.position);
+        bool landed = LandedAtDropOff(out _);
+        if (toSeat.magnitude > 0.5f && Time.time - returningSince < 6f && !landed)
+        {
+            input.yaw = Yaw(toSeat);
+            input.moveZ = 1f;
+            return;
+        }
+        me.SetPassengerSeat(seat);
+        arrivedAt = 0f; returningSince = 0f;
+        nextTakeover = Time.time + Random.Range(30f, 50f);
+        Enter(State.Seated);
+    }
+    float arrivedAt, nextMeddle, returningSince;
 
     // ------------------------------------------------------------------ Recliner Guy
 
