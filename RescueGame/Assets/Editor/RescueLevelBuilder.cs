@@ -77,8 +77,7 @@ public static class RescueLevelBuilder
         }
 
         // building behind the pad (generated brick, like the rest of the city), glass entrance facing the pad
-        CityBuilder.MakeBuilding(root, "HospitalBuilding", root.TransformPoint(new Vector3(0f, 0f, -19f)), root.rotation, 16f, 10f, 9f, "Brick_Tan",
-            new System.Random(7), Vector3.one * 9999f, bodyCollider: true, forceShopFace: 2);
+        CityBuilder.MakeStoredBuilding(root, "HospitalBuilding", root.TransformPoint(new Vector3(0f, 0f, -19f)), root.rotation, 16f, 10f, 9f, "Brick_Tan", 7, 2);
         Block(root, "Canopy", new Vector3(0f, 3.2f, -13.2f), new Vector3(5f, 0.15f, 1.8f), white, true);
         Block(root, "CanopyPostL", new Vector3(-2.3f, 1.6f, -12.5f), new Vector3(0.12f, 3.2f, 0.12f), white, false);
         Block(root, "CanopyPostR", new Vector3(2.3f, 1.6f, -12.5f), new Vector3(0.12f, 3.2f, 0.12f), white, false);
