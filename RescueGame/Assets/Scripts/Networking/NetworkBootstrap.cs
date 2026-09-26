@@ -10,6 +10,7 @@ using UnityEngine;
 ///   -client [ip]        join (default 127.0.0.1)
 ///   -autopilot          the pilot flies a scripted test pattern
 ///   -takepilot          sit in the pilot seat as soon as connected (dev builds only)
+///   -testboard          your crew member walks to the helicopter and jumps aboard (dev test)
 ///   -testgrab           your crew member looks down and holds on to the floor (dev test)
 ///   -netlog             print helicopter + crew positions once a second (for comparing machines)
 ///
@@ -44,6 +45,7 @@ public class NetworkBootstrap : MonoBehaviour
                 case "-netlog": netLog = true; break;
                 case "-takepilot": NetworkPlayer.ForceSeatForTests = true; break;
                 case "-testgrab": NetworkPlayer.HoldGrabForTests = true; break;
+                case "-testboard": NetworkPlayer.BoardForTests = true; break;
                 case "-client" when i + 1 < args.Length && !args[i + 1].StartsWith("-"): joinAddress = args[i + 1]; break;
             }
         }

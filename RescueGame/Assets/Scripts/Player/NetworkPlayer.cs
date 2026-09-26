@@ -41,6 +41,7 @@ public class NetworkPlayer : NetworkBehaviour
 
     public static bool ForceSeatForTests;
     public static bool HoldGrabForTests;   // test switch: look down and hold grab the whole time
+    public static bool BoardForTests;      // test switch: walk forward and keep jumping (climb aboard)
 
     void Awake()
     {
@@ -60,24 +61,43 @@ public class NetworkPlayer : NetworkBehaviour
         }
 
         if (IsServer && heli != null)
-            body.StandUp(FindSpawnSpot(), heli.GetComponent<Rigidbody>());
+        {
+            // Start outside on the ground, facing the helicopter's side door.
+            Vector3 feet = FindSpawnSpot();
+            body.StandUp(feet, null);
+            Vector3 toHeli = heli.transform.position - feet; toHeli.y = 0f;
+            float yaw = Quaternion.LookRotation(toHeli).eulerAngles.y;
+            transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            FaceRpc(yaw);
+        }
     }
 
-    // Cabin standing spots (helicopter local space, feet on the floor), away from the open doors.
-    static readonly Vector2[] SpawnSlots = { new(-0.4f, 0.3f), new(0.4f, 0.3f), new(-0.4f, 1.1f), new(0.4f, 1.1f), new(0f, 0.7f) };
+    // Standing spots on the ground beside the helicopter's side doors (helicopter local x, z).
+    static readonly Vector2[] SpawnSlots = { new(-2.6f, 0.5f), new(2.6f, 0.5f), new(-2.6f, 1.6f), new(2.6f, 1.6f), new(-3.6f, 1.0f), new(3.6f, 1.0f) };
 
     Vector3 FindSpawnSpot()
     {
+        var myRb = GetComponent<Rigidbody>();
         foreach (var slot in SpawnSlots)
         {
-            Vector3 feet = heli.transform.TransformPoint(new Vector3(slot.x, heli.cabinFloorHeight + 0.05f, slot.y));
-            Vector3 up = heli.transform.up;
+            Vector3 above = heli.transform.TransformPoint(new Vector3(slot.x, 0f, slot.y)) + Vector3.up * 5f;
+            if (!Physics.Raycast(above, Vector3.down, out RaycastHit ground, 20f, ~0, QueryTriggerInteraction.Ignore)) continue;
+            if (ground.rigidbody != null) continue; // landed on the helicopter or a person, not the ground
+
+            Vector3 feet = ground.point + Vector3.up * 0.05f;
             bool blocked = false;
-            foreach (var c in Physics.OverlapCapsule(feet + up * 0.3f, feet + up * 1.2f, 0.28f, ~0, QueryTriggerInteraction.Ignore))
-                if (c.attachedRigidbody != GetComponent<Rigidbody>() && c.GetComponentInParent<CrewBody>() != null) { blocked = true; break; }
+            foreach (var c in Physics.OverlapCapsule(feet + Vector3.up * 0.3f, feet + Vector3.up * 1.2f, 0.28f, ~0, QueryTriggerInteraction.Ignore))
+                if (c.attachedRigidbody != myRb && c.attachedRigidbody != null) { blocked = true; break; }
             if (!blocked) return feet;
         }
-        return heli.transform.TransformPoint(new Vector3(0f, heli.cabinFloorHeight + 0.05f, 0.7f));
+        return heli.transform.TransformPoint(new Vector3(-3f, 0f, 1f)) + Vector3.up * 0.3f;
+    }
+
+    [Rpc(SendTo.Owner)]
+    void FaceRpc(float yaw)
+    {
+        LookYaw = yaw;
+        LookPitch = 0f;
     }
 
     public override void OnNetworkDespawn()
@@ -152,6 +172,7 @@ public class NetworkPlayer : NetworkBehaviour
         var mouse = Mouse.current;
         i.grab = looking && mouse != null && mouse.leftButton.isPressed && !SeatedAsPilot.Value;
         if (HoldGrabForTests) { i.grab = true; i.pitch = 60f; }
+        if (BoardForTests && !OnHelicopter.Value) { i.moveZ = 1f; i.jump = Time.time % 1f < Time.fixedDeltaTime; }
         return i;
     }
 

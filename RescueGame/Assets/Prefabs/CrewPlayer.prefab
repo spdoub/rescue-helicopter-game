@@ -110,7 +110,7 @@ MonoBehaviour:
   walkSpeed: 3.5
   groundAccel: 12
   airAccel: 2
-  jumpSpeed: 4.5
+  jumpSpeed: 5.3
   knockdownAccel: 12
   knockdownSlope: 40
   knockdownTime: 2
