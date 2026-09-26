@@ -103,8 +103,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CrewBody
   walkSpeed: 3.5
   sprintSpeed: 6
-  groundAccel: 12
-  airAccel: 2
+  groundAccel: 7
+  airAccel: 3
   jumpSpeed: 5.3
   coyoteTime: 0.15
   jumpBuffer: 0.15
@@ -249,6 +249,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  LocalMove:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: {x: 0, y: 0}
   Pitch:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -903,10 +908,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2e67f157feee4f6a9462a6af6d792df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrewVisual
-  armSwing: 3.5
-  armSpring: 40
-  armDamping: 5
-  headWobble: 1.5
+  armSwing: 5.5
+  armSpring: 30
+  armDamping: 4
+  headWobble: 2.2
+  turnSpeed: 9
+  leanPerAccel: 1.6
+  maxLean: 16
+  maxLegTurn: 60
+  reachBlendSpeed: 7
+  handFollowSpeed: 12
+  handWobble: 0.03
+  eyeUp: 0.1
+  eyeForward: 0.2
   tetherStrength: 60
   tetherDamping: 8
   stickGrip: {x: 0.45, y: 1.55, z: 2.2}

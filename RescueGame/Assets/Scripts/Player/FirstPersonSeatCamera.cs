@@ -36,6 +36,7 @@ public class FirstPersonSeatCamera : MonoBehaviour
     public static View ForcedView = (View)(-1); // test screenshots only
     View view = View.FirstPerson;
     float yaw, pitch;
+    Vector3 bobOffset;
     NetworkHelicopter netHeli;
     Camera cam;
 
@@ -84,8 +85,14 @@ public class FirstPersonSeatCamera : MonoBehaviour
             // Stand in front of your character and look back at it (turns as you turn).
             Vector3 body = me.Visual != null && me.Visual.Ragdolled ? me.Visual.HeadPosition : me.transform.position;
             Vector3 facing = Quaternion.Euler(0f, me.LookYaw, 0f) * Vector3.forward;
-            transform.position = body + facing * frontDistance + Vector3.up * frontHeight;
-            transform.LookAt(body + Vector3.up * 0.1f);
+            // Pull in closer if a wall or the helicopter is in the way.
+            Vector3 focus = body + Vector3.up * 0.1f;
+            Vector3 offset = facing * frontDistance + Vector3.up * frontHeight;
+            float dist = offset.magnitude;
+            foreach (var hit in Physics.SphereCastAll(focus, 0.2f, offset.normalized, dist, GameLayers.Gameplay & ~(1 << GameLayers.Crew), QueryTriggerInteraction.Ignore))
+                if (hit.distance > 0f) dist = Mathf.Min(dist, hit.distance - 0.05f);
+            transform.position = focus + offset.normalized * Mathf.Max(dist, 0.6f);
+            transform.LookAt(focus);
             return;
         }
 
@@ -111,9 +118,17 @@ public class FirstPersonSeatCamera : MonoBehaviour
                 // Knocked flat: ride along with the floppy ragdoll's head.
                 // Eyes ride on the animated head (so the body stays lined up underneath you);
                 // the model detaches from the body while ragdolled.
+                // Head bob is smoothed relative to the body so it feels loose, not jittery.
                 var visual = me.Visual;
-                Vector3 eyePos = visual != null ? visual.EyePosition : me.GetComponent<CrewBody>().Eye;
-                transform.position = Vector3.Lerp(transform.position, eyePos, visual != null && visual.Ragdolled ? 0.35f : 1f);
+                Vector3 steady = me.GetComponent<CrewBody>().Eye;
+                Vector3 eyePos = visual != null ? visual.EyePosition : steady;
+                if (visual != null && visual.Ragdolled)
+                    transform.position = Vector3.Lerp(transform.position, eyePos, 0.35f);
+                else
+                {
+                    bobOffset = Vector3.Lerp(bobOffset, eyePos - steady, 1f - Mathf.Exp(-12f * Time.deltaTime));
+                    transform.position = steady + bobOffset;
+                }
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }
             return;

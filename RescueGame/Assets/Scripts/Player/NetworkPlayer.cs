@@ -27,6 +27,7 @@ public class NetworkPlayer : NetworkBehaviour
     public NetworkVariable<bool> KnockedDown = new();
     public NetworkVariable<bool> Grounded = new(true);
     public NetworkVariable<float> MoveSpeed = new();     // walking speed relative to what you stand on
+    public NetworkVariable<Vector2> LocalMove = new();   // that movement in body space: x right, y forward
     public NetworkVariable<float> Pitch = new();         // where the head/arms point (for other players)
     public NetworkVariable<bool> ReachLeft = new(), ReachRight = new();
     public NetworkVariable<bool> HoldLeft = new(), HoldRight = new();
@@ -232,6 +233,9 @@ public class NetworkPlayer : NetworkBehaviour
         Vector3 rel = GetComponent<Rigidbody>().linearVelocity - body.PlatformVelocity; rel.y = 0f;
         float speed = Mathf.Round(rel.magnitude * 10f) / 10f;
         if (!Mathf.Approximately(MoveSpeed.Value, speed)) MoveSpeed.Value = speed;
+        Vector3 local = Quaternion.Euler(0f, -transform.eulerAngles.y, 0f) * rel;
+        var move2 = new Vector2(Mathf.Round(local.x * 10f) / 10f, Mathf.Round(local.z * 10f) / 10f);
+        if ((LocalMove.Value - move2).sqrMagnitude > 0.01f) LocalMove.Value = move2;
     }
 
     static void Set(NetworkVariable<bool> v, bool value)

@@ -8,7 +8,9 @@ using UnityEngine;
 ///   seated pose in the pilot seat.
 /// - Hands (Human Fall Flat style): arms reach where you look while a mouse button is held and
 ///   hands land exactly on whatever they're holding. Pilots hold the stick and collective.
-/// - Floppiness: arms and head lag and swing with sudden speed changes (jumps, landings, lurches).
+/// - Floppiness: arms and head lag and swing with sudden speed changes (jumps, landings, lurches),
+///   the body leans into acceleration and turns lazily, reaching arms glide and wobble.
+/// - Walking backwards plays the walk in reverse; sideways/diagonal moves turn the legs.
 /// - Ragdoll: when knocked down the skeleton goes fully limp, loosely tethered to the physics
 ///   body so it flops around but stays where the player really is.
 /// - First person: your own head is hidden from your camera so you see your arms and legs.
@@ -18,10 +20,26 @@ using UnityEngine;
 public class CrewVisual : MonoBehaviour
 {
     [Header("Floppiness")]
-    public float armSwing = 3.5f;       // how much arms react to acceleration
-    public float armSpring = 40f;
-    public float armDamping = 5f;
-    public float headWobble = 1.5f;
+    public float armSwing = 5.5f;       // how much arms react to acceleration
+    public float armSpring = 30f;
+    public float armDamping = 4f;       // lower = more overshoot and wobble
+    public float headWobble = 2.2f;
+
+    [Header("Body")]
+    [Tooltip("How quickly the body turns to face where you look (lower = lazier).")]
+    public float turnSpeed = 9f;
+    [Tooltip("Degrees of lean per m/s² of acceleration (leans into starts, stops and turns).")]
+    public float leanPerAccel = 1.6f;
+    public float maxLean = 16f;
+    [Tooltip("Legs turn toward sideways/diagonal movement by up to this much.")]
+    public float maxLegTurn = 60f;
+
+    [Header("Hands")]
+    [Tooltip("How fast arms raise/lower when you start/stop reaching.")]
+    public float reachBlendSpeed = 7f;
+    [Tooltip("How fast a reaching hand follows where you look (lower = floatier).")]
+    public float handFollowSpeed = 12f;
+    public float handWobble = 0.03f;
 
     [Header("First-person eyes (from the head bone)")]
     public float eyeUp = 0.1f;
@@ -59,7 +77,14 @@ public class CrewVisual : MonoBehaviour
     Vector3 swing, swingVel;          // spring state for floppy arms/head (world-space offset)
     bool isLocal;
 
+    float bodyYaw, legTurn;           // smoothed facing and leg direction
+    Vector3 lean, leanVel;            // spring state for leaning into acceleration
+
+    class HandState { public float weight; public Vector3 pos; public bool init; }
+    readonly HandState leftHand = new(), rightHand = new();
+
     static readonly int SpeedId = Animator.StringToHash("Speed");
+    static readonly int DirectionId = Animator.StringToHash("Direction");
     static readonly int GroundedId = Animator.StringToHash("Grounded");
     static readonly int SeatedId = Animator.StringToHash("Seated");
 
@@ -83,6 +108,7 @@ public class CrewVisual : MonoBehaviour
         hipsBody = hips ? hips.GetComponent<Rigidbody>() : null;
         SetRagdollPhysics(false);
         lastRootPos = root.position;
+        bodyYaw = root.eulerAngles.y;
     }
 
     void Update()
@@ -97,10 +123,43 @@ public class CrewVisual : MonoBehaviour
         else if (!knocked && Ragdolled) ExitRagdoll();
 
         if (Ragdolled) return;
-        anim.SetFloat(SpeedId, player.MoveSpeed.Value, 0.1f, Time.deltaTime);
+        float dt = Time.deltaTime;
+
+        // Which way are the legs going, relative to where the body faces?
+        Vector2 move = player.LocalMove.Value;       // x = right, y = forward (m/s)
+        float speed = move.magnitude;
+        float direction = 1f, targetLegTurn = 0f;
+        if (speed > 0.3f && !player.SeatedAsPilot.Value)
+        {
+            float angle = Mathf.Atan2(move.x, move.y) * Mathf.Rad2Deg;     // 0 = forward, ±180 = back
+            if (Mathf.Abs(angle) <= 100f) targetLegTurn = angle;
+            else { direction = -1f; targetLegTurn = angle - 180f * Mathf.Sign(angle); } // walk backwards
+            targetLegTurn = Mathf.Clamp(targetLegTurn, -maxLegTurn, maxLegTurn);
+        }
+        legTurn = Mathf.LerpAngle(legTurn, targetLegTurn, 1f - Mathf.Exp(-8f * dt));
+
+        anim.SetFloat(SpeedId, speed, 0.15f, dt);
+        anim.SetFloat(DirectionId, direction, 0.1f, dt);
         anim.SetBool(GroundedId, player.Grounded.Value || player.SeatedAsPilot.Value);
         anim.SetBool(SeatedId, player.SeatedAsPilot.Value);
+
+        // Lazy turning: the body swings round to face where you look instead of snapping.
+        float rootYaw = root.eulerAngles.y;
+        bodyYaw = player.SeatedAsPilot.Value ? rootYaw : Mathf.LerpAngle(bodyYaw, rootYaw, 1f - Mathf.Exp(-turnSpeed * dt));
+        if (Mathf.Abs(Mathf.DeltaAngle(bodyYaw, rootYaw)) > 100f) bodyYaw = rootYaw;
+
+        // Lean into speeding up / stopping / turning (a springy wobble, so it overshoots a bit).
+        Vector3 accel = Vector3.ClampMagnitude(new Vector3(lastAccel.x, 0f, lastAccel.z), 25f);
+        Vector3 leanTarget = player.Grounded.Value && !player.SeatedAsPilot.Value ? accel * leanPerAccel : Vector3.zero;
+        leanVel += ((leanTarget - lean) * 60f - leanVel * 9f) * dt;
+        lean += leanVel * dt;
+        lean = Vector3.ClampMagnitude(lean, maxLean);
+        Vector3 leanAxis = Vector3.Cross(Vector3.up, lean);   // tip toward the acceleration
+        Quaternion tilt = leanAxis.sqrMagnitude > 1e-6f ? Quaternion.AngleAxis(lean.magnitude, leanAxis.normalized) : Quaternion.identity;
+        transform.rotation = tilt * Quaternion.Euler(0f, bodyYaw + legTurn, 0f);
     }
+
+    Vector3 lastAccel;
 
     // ---------------------------------------------------------------- where the player looks
 
@@ -120,43 +179,46 @@ public class CrewVisual : MonoBehaviour
         if (player == null || !player.IsSpawned) return;
         Vector3 look = LookDirection();
 
-        anim.SetLookAtWeight(1f, 0.25f, 0.9f, 0f, 0.6f);
+        anim.SetLookAtWeight(1f, 0.3f, 0.9f, 0f, 0.6f);
         anim.SetLookAtPosition(Eye + look * 5f);
 
         var heli = player.SeatedAsPilot.Value ? FindHeli() : null;
-        HandIK(AvatarIKGoal.LeftHand, -1f, look,
+        HandIK(AvatarIKGoal.LeftHand, leftHand, -1f, look,
             player.HoldLeft.Value, player.HoldPointLeft.Value,
             isLocal ? player.LocalReachLeft : player.ReachLeft.Value,
             heli ? heli.TransformPoint(collectiveGrip) : (Vector3?)null);
-        HandIK(AvatarIKGoal.RightHand, 1f, look,
+        HandIK(AvatarIKGoal.RightHand, rightHand, 1f, look,
             player.HoldRight.Value, player.HoldPointRight.Value,
             isLocal ? player.LocalReachRight : player.ReachRight.Value,
             heli ? heli.TransformPoint(stickGrip) : (Vector3?)null);
     }
 
-    void HandIK(AvatarIKGoal goal, float side, Vector3 look, bool holding, Vector3 holdPoint, bool reaching, Vector3? seatGrip)
+    void HandIK(AvatarIKGoal goal, HandState hand, float side, Vector3 look, bool holding, Vector3 holdPoint, bool reaching, Vector3? seatGrip)
     {
-        Vector3 target; float weight;
-        if (holding) { target = holdPoint; weight = 1f; }
-        else if (seatGrip.HasValue) { target = seatGrip.Value; weight = 1f; }
+        float dt = Time.deltaTime;
+        Vector3 target = hand.pos;
+        float targetWeight = 1f, follow = handFollowSpeed;
+        if (holding) { target = holdPoint; follow = 25f; }
+        else if (seatGrip.HasValue) { target = seatGrip.Value; follow = 30f; }
         else if (reaching)
         {
-            // Arm out toward where you're looking, a little to its own side.
+            // Arm out toward where you're looking, a little to its own side, with a loose wobble.
             Vector3 right = Vector3.Cross(Vector3.up, look).normalized;
             target = Eye + Vector3.down * 0.2f + right * (0.2f * side) + look * 0.65f;
-            weight = 1f;
+            float t = Time.time * 3.1f + side;
+            target += (right * Mathf.Sin(t) + Vector3.up * Mathf.Sin(t * 1.37f)) * handWobble;
         }
-        else
-        {
-            // Not using this hand: let the animation carry it (arms hang out of view).
-            anim.SetIKPositionWeight(goal, 0f);
-            anim.SetIKRotationWeight(goal, 0f);
-            return;
-        }
+        else targetWeight = 0f; // let the animation carry it (arms hang out of view)
 
-        anim.SetIKPositionWeight(goal, weight);
-        anim.SetIKPosition(goal, target);
-        anim.SetIKRotationWeight(goal, weight * 0.6f);
+        // Glide rather than snap: blend the arm in/out and let the hand trail its target.
+        if (!hand.init || hand.weight < 0.01f) { hand.pos = target; hand.init = true; }
+        hand.weight = Mathf.MoveTowards(hand.weight, targetWeight, reachBlendSpeed * dt);
+        if (targetWeight > 0f) hand.pos = Vector3.Lerp(hand.pos, target, 1f - Mathf.Exp(-follow * dt));
+
+        float w = Mathf.SmoothStep(0f, 1f, hand.weight);
+        anim.SetIKPositionWeight(goal, w);
+        anim.SetIKPosition(goal, hand.pos);
+        anim.SetIKRotationWeight(goal, w * 0.5f);
         anim.SetIKRotation(goal, Quaternion.LookRotation(look, Vector3.up));
     }
 
@@ -180,6 +242,7 @@ public class CrewVisual : MonoBehaviour
 
         rootVel = (root.position - lastRootPos) / dt;
         Vector3 accel = (rootVel - lastRootVel) / dt;
+        lastAccel = Vector3.Lerp(lastAccel, accel, 1f - Mathf.Exp(-12f * dt)); // smoothed, for leaning
         lastRootPos = root.position;
         lastRootVel = rootVel;
 
@@ -195,8 +258,8 @@ public class CrewVisual : MonoBehaviour
             bool airborne = player.IsSpawned && !player.Grounded.Value && !player.SeatedAsPilot.Value;
             Vector3 flail = airborne ? new Vector3(Mathf.Sin(Time.time * 13f), Mathf.Sin(Time.time * 9f + 1f), 0f) * 0.12f : Vector3.zero;
 
-            FlopArm(leftUpperArm, player.HoldLeft.Value || (isLocal ? player.LocalReachLeft : player.ReachLeft.Value), swing + flail);
-            FlopArm(rightUpperArm, player.HoldRight.Value || (isLocal ? player.LocalReachRight : player.ReachRight.Value) || player.SeatedAsPilot.Value, swing - flail);
+            FlopArm(leftUpperArm, leftHand.weight > 0.5f, swing + flail);
+            FlopArm(rightUpperArm, rightHand.weight > 0.5f, swing - flail);
             if (neck) neck.rotation = Quaternion.AngleAxis(swing.magnitude * 40f * headWobble, Vector3.Cross(Vector3.up, swing).normalized + Vector3.forward * 1e-4f) * neck.rotation;
         }
 
@@ -240,7 +303,8 @@ public class CrewVisual : MonoBehaviour
         transform.localPosition = localOffset;
         transform.localRotation = localRotation;
         anim.enabled = true;
-        swing = swingVel = Vector3.zero;
+        swing = swingVel = lean = leanVel = Vector3.zero;
+        bodyYaw = root.eulerAngles.y;
     }
 
     void SetRagdollPhysics(bool on)
