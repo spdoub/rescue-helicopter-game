@@ -8,9 +8,11 @@ public struct PlayerInput : INetworkSerializable
     public float moveX;     // strafe  -1..1
     public float moveZ;     // forward -1..1
     public float yaw;       // world-space facing, degrees
-    public float pitch;     // look up/down, degrees (used for grabbing)
+    public float pitch;     // look up/down, degrees (+ is down)
     public bool jump;       // pressed since last send
-    public bool grab;       // held
+    public bool sprint;     // held
+    public bool grabLeft;   // left mouse held: left hand reaches / grabs
+    public bool grabRight;  // right mouse held: right hand reaches / grabs
 
     public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
     {
@@ -19,6 +21,8 @@ public struct PlayerInput : INetworkSerializable
         s.SerializeValue(ref yaw);
         s.SerializeValue(ref pitch);
         s.SerializeValue(ref jump);
-        s.SerializeValue(ref grab);
+        s.SerializeValue(ref sprint);
+        s.SerializeValue(ref grabLeft);
+        s.SerializeValue(ref grabRight);
     }
 }

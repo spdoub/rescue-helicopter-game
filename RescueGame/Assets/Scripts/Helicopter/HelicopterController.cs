@@ -104,7 +104,7 @@ public class HelicopterController : MonoBehaviour
     bool CheckLanded()
     {
         Vector3 origin = transform.position + transform.up * 0.3f;
-        foreach (var hit in Physics.RaycastAll(origin, -transform.up, 0.3f + groundCheckDistance, ~0, QueryTriggerInteraction.Ignore))
+        foreach (var hit in Physics.RaycastAll(origin, -transform.up, 0.3f + groundCheckDistance, GameLayers.Gameplay, QueryTriggerInteraction.Ignore))
             if (hit.rigidbody != rb) return true;
         return false;
     }

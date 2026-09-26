@@ -6,9 +6,10 @@ using UnityEngine.InputSystem;
 /// A player's crew member over the network (host-authoritative, like the helicopter).
 /// - On the owner's machine: reads WASD / mouse / Space / E / left click and sends it to the host.
 /// - On the host: feeds those controls into CrewBody physics and handles the pilot seat.
-/// - Everywhere: shows the grab arm so everyone can see who's holding what.
+/// - Everywhere: publishes what CrewVisual needs to animate the body (look, hands, speed, airborne).
 ///
-/// Controls: WASD walk, Space jump, mouse look, hold left click to grab, E to sit in / leave the pilot seat.
+/// Controls: WASD walk, Shift run, Space jump, mouse look, hold left/right click to reach and grab
+/// with that hand (hold W while holding on to climb), E to sit in / leave the pilot seat.
 /// </summary>
 [RequireComponent(typeof(CrewBody))]
 public class NetworkPlayer : NetworkBehaviour
@@ -17,13 +18,20 @@ public class NetworkPlayer : NetworkBehaviour
     public static NetworkPlayer Local { get; private set; }
 
     public float mouseSensitivity = 0.12f;
-    public LineRenderer grabArm;
 
     public NetworkVariable<bool> SeatedAsPilot = new();
     public NetworkVariable<bool> OnHelicopter = new();
     public NetworkVariable<bool> KnockedDown = new();
-    public NetworkVariable<bool> Grabbing = new();
-    public NetworkVariable<Vector3> GrabPoint = new();
+    public NetworkVariable<bool> Grounded = new(true);
+    public NetworkVariable<float> MoveSpeed = new();     // walking speed relative to what you stand on
+    public NetworkVariable<float> Pitch = new();         // where the head/arms point (for other players)
+    public NetworkVariable<bool> ReachLeft = new(), ReachRight = new();
+    public NetworkVariable<bool> HoldLeft = new(), HoldRight = new();
+    public NetworkVariable<Vector3> HoldPointLeft = new(), HoldPointRight = new();
+
+    /// <summary>Is the grabbing test switch on (or the mouse held) for this hand right now - owner only.</summary>
+    public bool LocalReachLeft { get; private set; }
+    public bool LocalReachRight { get; private set; }
 
     // Owner-side look state (world yaw so you keep facing the same way if you fall out).
     public float LookYaw { get; private set; }
@@ -81,12 +89,12 @@ public class NetworkPlayer : NetworkBehaviour
         foreach (var slot in SpawnSlots)
         {
             Vector3 above = heli.transform.TransformPoint(new Vector3(slot.x, 0f, slot.y)) + Vector3.up * 5f;
-            if (!Physics.Raycast(above, Vector3.down, out RaycastHit ground, 20f, ~0, QueryTriggerInteraction.Ignore)) continue;
+            if (!Physics.Raycast(above, Vector3.down, out RaycastHit ground, 20f, GameLayers.Gameplay, QueryTriggerInteraction.Ignore)) continue;
             if (ground.rigidbody != null) continue; // landed on the helicopter or a person, not the ground
 
             Vector3 feet = ground.point + Vector3.up * 0.05f;
             bool blocked = false;
-            foreach (var c in Physics.OverlapCapsule(feet + Vector3.up * 0.3f, feet + Vector3.up * 1.2f, 0.28f, ~0, QueryTriggerInteraction.Ignore))
+            foreach (var c in Physics.OverlapCapsule(feet + Vector3.up * 0.3f, feet + Vector3.up * 1.2f, 0.28f, GameLayers.Gameplay, QueryTriggerInteraction.Ignore))
                 if (c.attachedRigidbody != myRb && c.attachedRigidbody != null) { blocked = true; break; }
             if (!blocked) return feet;
         }
@@ -108,7 +116,6 @@ public class NetworkPlayer : NetworkBehaviour
 
     void Update()
     {
-        if (grabArm) UpdateGrabArm();
         if (!IsOwner) return;
 
         var kb = Keyboard.current;
@@ -169,9 +176,14 @@ public class NetworkPlayer : NetworkBehaviour
             if (kb.dKey.isPressed) i.moveX += 1f;
             if (kb.aKey.isPressed) i.moveX -= 1f;
         }
+        if (kb != null) i.sprint = kb.leftShiftKey.isPressed && !SeatedAsPilot.Value;
         var mouse = Mouse.current;
-        i.grab = looking && mouse != null && mouse.leftButton.isPressed && !SeatedAsPilot.Value;
-        if (HoldGrabForTests) { i.grab = true; i.pitch = 60f; }
+        bool free = looking && mouse != null && !SeatedAsPilot.Value;
+        i.grabLeft = free && mouse.leftButton.isPressed;
+        i.grabRight = free && mouse.rightButton.isPressed;
+        if (HoldGrabForTests) { i.grabLeft = i.grabRight = true; i.pitch = 60f; }
+        LocalReachLeft = i.grabLeft;
+        LocalReachRight = i.grabRight;
         if (BoardForTests && !OnHelicopter.Value) { i.moveZ = 1f; i.jump = Time.time % 1f < Time.fixedDeltaTime; }
         return i;
     }
@@ -200,10 +212,25 @@ public class NetworkPlayer : NetworkBehaviour
         body.Simulate(input, Time.fixedDeltaTime);
 
         bool onHeli = heli != null && body.GroundBody != null && body.GroundBody.gameObject == heli.gameObject;
-        if (OnHelicopter.Value != onHeli) OnHelicopter.Value = onHeli;
-        if (KnockedDown.Value != body.IsKnockedDown) KnockedDown.Value = body.IsKnockedDown;
-        if (Grabbing.Value != body.IsGrabbing) Grabbing.Value = body.IsGrabbing;
-        if (body.IsGrabbing) GrabPoint.Value = body.GrabPoint;
+        Set(OnHelicopter, onHeli);
+        Set(KnockedDown, body.IsKnockedDown);
+        Set(Grounded, body.IsGrounded);
+        Set(ReachLeft, input.grabLeft);
+        Set(ReachRight, input.grabRight);
+        Set(HoldLeft, body.Left.Holding);
+        Set(HoldRight, body.Right.Holding);
+        if (body.Left.Holding) HoldPointLeft.Value = body.Left.Point;
+        if (body.Right.Holding) HoldPointRight.Value = body.Right.Point;
+        if (Mathf.Abs(Pitch.Value - input.pitch) > 1f) Pitch.Value = input.pitch;
+
+        Vector3 rel = GetComponent<Rigidbody>().linearVelocity - body.PlatformVelocity; rel.y = 0f;
+        float speed = Mathf.Round(rel.magnitude * 10f) / 10f;
+        if (!Mathf.Approximately(MoveSpeed.Value, speed)) MoveSpeed.Value = speed;
+    }
+
+    static void Set(NetworkVariable<bool> v, bool value)
+    {
+        if (v.Value != value) v.Value = value;
     }
 
     [Rpc(SendTo.Server)]
@@ -227,14 +254,5 @@ public class NetworkPlayer : NetworkBehaviour
             heli.SetPilot(OwnerClientId);
             body.Sit(heli.pilotSeat);
         }
-    }
-
-    void UpdateGrabArm()
-    {
-        bool show = Grabbing.Value && !SeatedAsPilot.Value;
-        grabArm.enabled = show;
-        if (!show) return;
-        grabArm.SetPosition(0, transform.position + transform.right * 0.25f + Vector3.up * 0.4f);
-        grabArm.SetPosition(1, GrabPoint.Value);
     }
 }

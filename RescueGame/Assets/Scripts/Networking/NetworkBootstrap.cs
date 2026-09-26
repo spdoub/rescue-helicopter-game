@@ -121,7 +121,7 @@ public class NetworkBootstrap : MonoBehaviour
         foreach (var pl in FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None))
         {
             Vector3 local = heli.transform.InverseTransformPoint(pl.transform.position);
-            crew += $" | p{pl.OwnerClientId} local=({local.x:F1},{local.y:F1},{local.z:F1}){(pl.SeatedAsPilot.Value ? " SEATED" : "")}{(pl.KnockedDown.Value ? " DOWN" : "")}{(pl.OnHelicopter.Value ? " onheli" : "")}{(pl.Grabbing.Value ? " GRAB" : "")}";
+            crew += $" | p{pl.OwnerClientId} local=({local.x:F1},{local.y:F1},{local.z:F1}){(pl.SeatedAsPilot.Value ? " SEATED" : "")}{(pl.KnockedDown.Value ? " DOWN" : "")}{(pl.OnHelicopter.Value ? " onheli" : "")}{(pl.HoldLeft.Value || pl.HoldRight.Value ? " GRAB" : "")}{(!pl.Grounded.Value && !pl.SeatedAsPilot.Value ? " air" : "")}";
         }
         var ci = heli.GetComponent<HelicopterController>().CurrentInput;
         crew += $" | in c{ci.collective:F1} p{ci.pitch:F1} r{ci.roll:F1} y{ci.yaw:F1} w{heli.GetComponent<Rigidbody>().angularVelocity.magnitude:F2}";
