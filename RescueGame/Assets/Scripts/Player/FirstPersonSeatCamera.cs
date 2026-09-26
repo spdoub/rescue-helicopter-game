@@ -106,6 +106,6 @@ public class FirstPersonSeatCamera : MonoBehaviour
     static bool MouseOverMenu(Mouse mouse)
     {
         Vector2 p = mouse.position.ReadValue();
-        return p.x < 290 && p.y > Screen.height - 230;
+        return p.x < 320 && p.y > Screen.height - 250;
     }
 }

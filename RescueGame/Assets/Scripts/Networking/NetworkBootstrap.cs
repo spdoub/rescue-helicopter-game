@@ -1,11 +1,16 @@
 using System;
+using System.Collections;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
 /// <summary>
-/// Prototype lobby: a small on-screen panel to Host or Join a game, plus command-line
-/// switches for automated testing:
+/// Prototype lobby. The game hosts automatically when it opens, so you always spawn as a crew
+/// member. To play together, the other copy types the host's address and clicks Join.
+/// Command-line switches for automated testing:
 ///   -host               start as host
 ///   -client [ip]        join (default 127.0.0.1)
 ///   -autopilot          the pilot flies a scripted test pattern
@@ -22,6 +27,8 @@ public class NetworkBootstrap : MonoBehaviour
     public ushort port = 7777;
 
     string joinAddress = "127.0.0.1";
+    string status = "";
+    string localAddress;
     bool netLog;
     float nextLogTime;
     NetworkManager nm;
@@ -49,11 +56,21 @@ public class NetworkBootstrap : MonoBehaviour
                 case "-client" when i + 1 < args.Length && !args[i + 1].StartsWith("-"): joinAddress = args[i + 1]; break;
             }
         }
-        foreach (var a in args)
+        localAddress = FindLocalAddress();
+
+        if (args.Contains("-client")) StartClient();
+        else StartHost(); // default: host straight away, even with nobody else around
+    }
+
+    static string FindLocalAddress()
+    {
+        foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
         {
-            if (a == "-host") StartHost();
-            else if (a == "-client") StartClient();
+            if (ni.OperationalStatus != OperationalStatus.Up || ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+            foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+                if (ua.Address.AddressFamily == AddressFamily.InterNetwork) return ua.Address.ToString();
         }
+        return "127.0.0.1";
     }
 
     void Transport(string address)
@@ -65,15 +82,33 @@ public class NetworkBootstrap : MonoBehaviour
     public void StartHost()
     {
         Transport("127.0.0.1");
-        nm.StartHost();
-        Debug.Log($"[Net] Hosting on port {port}");
+        if (nm.StartHost())
+        {
+            status = "";
+            Debug.Log($"[Net] Hosting on port {port}");
+        }
+        else
+        {
+            // Usually: another copy on this computer is already hosting.
+            status = "Couldn't host (another copy may already be hosting). Join it instead.";
+            Debug.Log("[Net] Host failed to start");
+        }
     }
 
     public void StartClient()
     {
         Transport(joinAddress);
         nm.StartClient();
+        status = "";
         Debug.Log($"[Net] Joining {joinAddress}:{port}");
+    }
+
+    /// <summary>Stop whatever session is running, then run the next step once it has fully shut down.</summary>
+    IEnumerator Restart(Action next)
+    {
+        if (nm.IsListening) nm.Shutdown();
+        while (nm.ShutdownInProgress || nm.IsListening) yield return null;
+        next();
     }
 
     void Update()
@@ -95,26 +130,30 @@ public class NetworkBootstrap : MonoBehaviour
 
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(12, 12, 270, 210), GUI.skin.box);
-        if (!nm.IsClient && !nm.IsServer)
-        {
-            GUILayout.Label("Rescue Helicopter - prototype");
-            if (GUILayout.Button("Host game")) StartHost();
-            GUILayout.BeginHorizontal();
-            joinAddress = GUILayout.TextField(joinAddress, GUILayout.Width(140));
-            if (GUILayout.Button("Join")) StartClient();
-            GUILayout.EndHorizontal();
-            GUILayout.Label("Or just fly offline.");
-        }
+        GUILayout.BeginArea(new Rect(12, 12, 300, 230), GUI.skin.box);
+        if (nm.IsHost)
+            GUILayout.Label($"Hosting - friends join at {localAddress}   Players: {nm.ConnectedClientsIds.Count}");
+        else if (nm.IsConnectedClient)
+            GUILayout.Label($"Connected to {joinAddress}");
+        else if (nm.IsClient)
+            GUILayout.Label($"Connecting to {joinAddress}...");
         else
+            GUILayout.Label("Not connected");
+        if (status != "") GUILayout.Label(status);
+
+        if (!nm.IsClient || nm.IsHost)
         {
-            GUILayout.Label(nm.IsHost ? "Hosting" : nm.IsConnectedClient ? "Connected" : "Connecting...");
-            GUILayout.Label($"Players: {(nm.IsServer ? nm.ConnectedClientsIds.Count.ToString() : "-")}   You are #{nm.LocalClientId}");
-            if (heli != null && heli.IsSpawned)
-                GUILayout.Label(heli.IsLocalPilot ? "PILOT - E to get up" : "Crew - walk to the cockpit, E to fly");
-            GUILayout.Label("WASD walk, Space jump, hold click to grab");
-            if (GUILayout.Button("Leave")) nm.Shutdown();
+            GUILayout.BeginHorizontal();
+            joinAddress = GUILayout.TextField(joinAddress, GUILayout.Width(150));
+            if (GUILayout.Button("Join")) StartCoroutine(Restart(StartClient));
+            GUILayout.EndHorizontal();
         }
+        if (!nm.IsHost && GUILayout.Button("Host my own game")) StartCoroutine(Restart(StartHost));
+
+        if (heli != null && heli.IsSpawned)
+            GUILayout.Label(heli.IsLocalPilot ? "PILOT - E to get up" : "Walk to the cockpit, E to fly");
+        GUILayout.Label("WASD walk, Space jump, hold click to grab");
+        GUILayout.Label("Esc frees the mouse, click to look again");
         GUILayout.EndArea();
     }
 }
