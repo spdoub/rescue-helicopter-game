@@ -15,6 +15,9 @@ SFX = {
     "winch_motor": ("Electric rescue winch motor running, steady whirring whine with cable rattling on a drum, constant", 3.0, True),
     "door_slide": ("Heavy metal helicopter sliding door rolling on its track then clunking shut", 1.6, False),
     "hook_clank": ("Heavy steel rescue hook clanking against metal, single hit", 0.8, False),
+    "dog_bark_1": ("Small scruffy terrier dog, two excited high yappy barks, close up, no background noise", 1.2, False),
+    "dog_bark_2": ("Small terrier dog, one happy bark then a little growly play bark, close up", 1.2, False),
+    "dog_whine": ("Small dog whining and whimpering impatiently, short, close up", 1.5, False),
     "delivered_jingle": ("Short cheerful cartoon success jingle, bouncy brass and xylophone, cash register ding at the end", 2.5, False),
 }
 

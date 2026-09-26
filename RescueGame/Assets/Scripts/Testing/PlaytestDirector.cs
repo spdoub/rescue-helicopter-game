@@ -411,6 +411,23 @@ public class PlaytestDirector : MonoBehaviour
                 break;
             }
 
+            case "rescue_dogperson": // Dog Person: first the dog (hold the hook low and still), then her (pilot bot "rescue-dogperson")
+            {
+                SurvivorBrain G() => SurvivorBrain.Find(SurvivorBrain.Kind.DogPerson);
+                NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
+                RescueRounds(SurvivorBrain.Kind.DogPerson, 0, door, cabin);  // board + winch box
+                Add(new WinchUntil("over the roof", 0, d => { var g = G(); Vector3 tip = W(d).TipPosition, gp = g.transform.position; tip.y = gp.y = 0f; return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > gp.y + 4f; }, 60f));
+                Add(new WinchUntil("lower the hook to dog height", -1, d => W(d).HookEyePosition.y < G().transform.position.y + 0.1f, 20f));
+                Add(new WinchUntil("hold it still until Biscuit bites", 0, d => G().dog.Current == Dog.State.Latched, 60f));
+                Add(new WinchUntil("reel Biscuit up", 1, d => G().dog.Aboard, 30f));
+                Add(new WinchUntil("lower the hook to her", -1, d => W(d).HookEyePosition.y < G().transform.position.y + 0.6f || G().Current != SurvivorBrain.State.Waiting, 20f));
+                Add(new WinchUntil("she grabs the hook", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
+                Add(new WinchUntil("reel her up", 1, d => G().Current == SurvivorBrain.State.Boarding || G().Current == SurvivorBrain.State.Seated, 40f));
+                Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 150f));
+                Add(new WinchUntil("payout", 0, d => RescueZone.All.Count > 0 && RescueZone.All[0].Rescued.Value >= 1, 20f));
+                break;
+            }
+
             case "rescue_backseat": // same, for Backseat Pilot (pilot bot "rescue-backseat")
                 RescueRounds(SurvivorBrain.Kind.BackseatPilot, 1, door, cabin);
                 break;
@@ -573,6 +590,7 @@ public class PlaytestDirector : MonoBehaviour
         "rescue" => new RescuePilot().Tick,
         "rescue-recliner" => new RescuePilot(SurvivorBrain.Kind.ReclinerGuy).Tick,
         "rescue-backseat" => new RescuePilot(SurvivorBrain.Kind.BackseatPilot).Tick,
+        "rescue-dogperson" => new RescuePilot(SurvivorBrain.Kind.DogPerson).Tick,
         "rescue-backseat-linger" => new RescuePilot(SurvivorBrain.Kind.BackseatPilot, 75f).Tick,
         _ => t => default,
     };

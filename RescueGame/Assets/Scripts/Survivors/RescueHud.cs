@@ -71,7 +71,7 @@ public class RescueHud : MonoBehaviour
         foreach (var s in all)
         {
             if (!s.IsSpawned) continue;
-            string them = s.kind == SurvivorBrain.Kind.StrongGrandma ? "her" : "him";
+            string them = s.kind == SurvivorBrain.Kind.StrongGrandma || s.kind == SurvivorBrain.Kind.DogPerson ? "her" : "him";
             if (s.Current == SurvivorBrain.State.Meddling)
             {
                 Outlined(new Rect(26, y, 620, 30), $"- {s.displayName} is grabbing the controls!  Grab him (click) and pull him back!", objective);
@@ -81,6 +81,10 @@ public class RescueHud : MonoBehaviour
             string goal;
             switch (s.Current)
             {
+                case SurvivorBrain.State.Waiting when s.kind == SurvivorBrain.Kind.DogPerson && s.dog != null && !s.dog.Aboard:
+                    goal = $"Get {s.dog.dogName} the dog first - hang the hook low and still near him";
+                    Marker(cam, s.dog.transform.position + Vector3.up * 1f, s.dog.dogName);
+                    break;
                 case SurvivorBrain.State.Waiting:
                     goal = s.kind == SurvivorBrain.Kind.ReclinerGuy ? $"Pick up {s.displayName} - hook his chair's strap" : $"Pick up {s.displayName} from the rooftop";
                     Marker(cam, s.transform.position + Vector3.up * 1.8f, s.displayName);

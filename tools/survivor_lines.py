@@ -57,6 +57,19 @@ SURVIVORS = {
             "Hup! Textbook!", "Right. I'll be supervising.", "Adequate landing. Adequate.", "That was the winch's fault!",
         ],
     },
+    "dogperson": {
+        "voice": "FGY2WhTYpPnrIDTdsKH5",  # "Laura" - quirky, enthusiastic
+        "lines": [
+            "Is he okay? Is he scared? He looks scared.", "Biscuit's safe! Now me, please!",
+            "Is Biscuit alright up there?", "Don't let go of him!", "Faster, it's past his dinner time!",
+            "Who's a good boy? You are!", "He's never flown before. Neither have I.", "Biscuit, stop licking the pilot.",
+            "BISCUIT!", "Careful! He gets sick!", "Oh no, oh no, oh no!",
+            "Five stars! Biscuit loved it!", "Four stars. He only threw up once.", "Three stars. Biscuit is unsettled.",
+            "Two stars. Biscuit bit someone. I don't blame him.", "One star. Biscuit will remember this.",
+            "Coming, Biscuit!", "Biscuit! Oh, you brave boy!", "Come on Biscuit, walkies!", "Whoops! I'm okay!",
+            "Biscuit! BISCUIT! Come here, boy!", "I'm not leaving without Biscuit!", "He likes things that hold still!", "Biscuit, no! Not the edge!",
+        ],
+    },
 }
 
 

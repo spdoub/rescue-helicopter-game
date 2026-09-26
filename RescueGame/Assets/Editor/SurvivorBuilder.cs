@@ -55,6 +55,52 @@ public static class SurvivorBuilder
         height = 1.7f, eye = 1.5f, walk = 2.6f, sprint = 4f, jump = 4.6f, grip = 9000f, hardLanding = 12f, mass = 85f, payBonus = 200,
     };
 
+    static readonly Spec DogPerson = new()
+    {
+        id = "DogPerson", displayName = "Dog Person", kind = SurvivorBrain.Kind.DogPerson,
+        model = "Assets/Art/Characters/DogPerson/DogPerson.fbx", texture = "Assets/Art/Characters/DogPerson/DogPerson_BaseColor.png",
+        voiceDir = "Assets/Audio/Survivors/dogperson", outPath = "Assets/Prefabs/Survivor_DogPerson.prefab",
+        height = 1.58f, eye = 1.4f, walk = 2.8f, sprint = 4.2f, jump = 4.6f, grip = 9000f, hardLanding = 12f, mass = 60f, payBonus = 300,
+    };
+
+    [MenuItem("Tools/Rescue Heli/Build Survivor Dog Person")]
+    public static void BuildDogPerson()
+    {
+        BuildDog();
+        Build(DogPerson);
+    }
+
+    /// <summary>Biscuit: a networked physics dog (static mesh, procedural trot).</summary>
+    static void BuildDog()
+    {
+        const string dir = "Assets/Art/Characters/Dog/";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(dir + "M_Dog.mat");
+        if (mat == null)
+        {
+            mat = new Material(AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Interior/Mat_White.mat"));
+            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(dir + "Dog_BaseColor.png"));
+            AssetDatabase.CreateAsset(mat, dir + "M_Dog.mat");
+        }
+        var root = new GameObject("Dog");
+        var model = (GameObject)Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(dir + "Dog.fbx"), root.transform);
+        model.name = "Model";
+        foreach (var r in model.GetComponentsInChildren<Renderer>()) r.sharedMaterial = mat;
+        var box = root.AddComponent<BoxCollider>(); box.center = new Vector3(0f, 0.25f, 0f); box.size = new Vector3(0.26f, 0.46f, 0.56f);
+        var rb = root.AddComponent<Rigidbody>();
+        rb.mass = 12f; rb.freezeRotation = true; rb.linearDamping = 0.5f; rb.interpolation = RigidbodyInterpolation.Interpolate;
+        root.AddComponent<Unity.Netcode.NetworkObject>();
+        root.AddComponent<Unity.Netcode.Components.NetworkTransform>().Interpolate = true;
+        root.AddComponent<Unity.Netcode.Components.NetworkRigidbody>();
+        var dog = root.AddComponent<Dog>();
+        dog.model = model.transform;
+        AudioClip C(string n) => AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/" + n + ".wav");
+        dog.barks = new[] { C("dog_bark_1"), C("dog_bark_2") };
+        dog.whine = C("dog_whine");
+        PrefabUtility.SaveAsPrefabAsset(root, "Assets/Prefabs/Dog.prefab");
+        Object.DestroyImmediate(root);
+        Debug.Log("[Survivor] saved Assets/Prefabs/Dog.prefab");
+    }
+
     [MenuItem("Tools/Rescue Heli/Build Survivor Backseat Pilot")]
     public static void BuildBackseat() => Build(BackseatPilot);
 

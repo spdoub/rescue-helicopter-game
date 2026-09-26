@@ -16,6 +16,8 @@ SHOTS = {
     # name: extra args
     "grandma_roof": ["-shotat", "17.5,10.6,62.0,-60,14,55", "-shotdelay", "7"],
     "recliner_roof": ["-shotat", "-56.5,8.8,26.0,-60,15,55", "-shotdelay", "7"],
+    "dogperson_roof": ["-shotat", "-66.5,23.4,3.0,-118,18,55", "-shotdelay", "8"],
+    "backseat_roof": ["-shotat", "60.5,26.5,3.2,120,15,55", "-shotdelay", "7"],
     "city_overview": ["-shotat", "-10,38,-35,20,18,60", "-shotdelay", "6"],
     "hospital": ["-shotat", "-14,9,-26,235,20,55", "-shotdelay", "6"],
     "helipad_start": ["-shotview", "fp", "-shotpitch", "5", "-shotdelay", "6"],

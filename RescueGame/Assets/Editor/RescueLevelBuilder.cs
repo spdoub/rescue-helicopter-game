@@ -16,7 +16,7 @@ public static class RescueLevelBuilder
     [MenuItem("Tools/Rescue Heli/Build Rescue Level")]
     public static void Build()
     {
-        foreach (var n in new[] { "Grandma", "Hospital", "HospitalPad", "ReclinerChair", "ReclinerGuy", "BackseatPilot" }) { var o = GameObject.Find(n); if (o) Object.DestroyImmediate(o); }
+        foreach (var n in new[] { "Grandma", "Hospital", "HospitalPad", "ReclinerChair", "ReclinerGuy", "BackseatPilot", "DogPerson", "Dog" }) { var o = GameObject.Find(n); if (o) Object.DestroyImmediate(o); }
 
         // ---- the survivor, on the roof, on the side facing the helipad
         var roof = GameObject.Find("Environment/Block_3").GetComponent<Renderer>().bounds;
@@ -49,6 +49,24 @@ public static class RescueLevelBuilder
             Vector3 toOrigin = -new Vector3(b0.center.x, 0f, b0.center.z).normalized;
             Vector3 p0 = new Vector3(b0.center.x, b0.max.y + bp.GetComponent<CapsuleCollider>().height / 2f + 0.05f, b0.center.z) + toOrigin * 2.5f;
             bp.transform.SetPositionAndRotation(p0, Quaternion.LookRotation(toOrigin));
+        }
+
+        // ---- Dog Person and Biscuit on the roof of Block_7
+        var dpPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Survivor_DogPerson.prefab");
+        var dogPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Dog.prefab");
+        if (dpPrefab && dogPrefab)
+        {
+            var b7 = GameObject.Find("Environment/Block_7").GetComponent<Collider>().bounds;
+            Vector3 toOrigin = -new Vector3(b7.center.x, 0f, b7.center.z).normalized;
+            var dp = (GameObject)PrefabUtility.InstantiatePrefab(dpPrefab);
+            dp.name = "DogPerson";
+            dp.transform.SetPositionAndRotation(new Vector3(b7.center.x, b7.max.y + dp.GetComponent<CapsuleCollider>().height / 2f + 0.05f, b7.center.z) + toOrigin * 2f,
+                Quaternion.LookRotation(toOrigin));
+            var dg = (GameObject)PrefabUtility.InstantiatePrefab(dogPrefab);
+            dg.name = "Dog";
+            dg.transform.SetPositionAndRotation(new Vector3(b7.center.x, b7.max.y + 0.05f, b7.center.z) - toOrigin * 2.5f + Vector3.Cross(Vector3.up, toOrigin) * 2f,
+                Quaternion.LookRotation(toOrigin));
+            dp.GetComponent<SurvivorBrain>().dog = dg.GetComponent<Dog>();
         }
 
         // ---- the hospital

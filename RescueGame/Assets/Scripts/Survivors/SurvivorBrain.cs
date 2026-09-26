@@ -27,12 +27,14 @@ using UnityEngine;
 public class SurvivorBrain : NetworkBehaviour
 {
     public enum State : byte { Waiting, Hooked, Boarding, Seated, Delivered, Meddling }
-    public enum Kind : byte { StrongGrandma, ReclinerGuy, BackseatPilot }
+    public enum Kind : byte { StrongGrandma, ReclinerGuy, BackseatPilot, DogPerson }
 
     public Kind kind = Kind.StrongGrandma;
     public string displayName = "Grandma";
     [Tooltip("Recliner Guy's chair.")]
     public Recliner chair;
+    [Tooltip("Dog Person's dog.")]
+    public Dog dog;
     [Tooltip("Extra pay on delivery (heavier, needier survivors pay more).")]
     public int payBonus;
     [Tooltip("How far (m, sideways) she'll shuffle over to grab the hook.")]
@@ -109,7 +111,19 @@ public class SurvivorBrain : NetworkBehaviour
         hup = "Hup! Textbook!", settled = "Right. I'll be supervising.", arrived = "Adequate landing. Adequate.", fell = "That was the winch's fault!",
     };
 
-    Personality L => kind switch { Kind.ReclinerGuy => ReclinerLines, Kind.BackseatPilot => BackseatLines, _ => GrandmaLines };
+    static readonly Personality DogLines = new()
+    {
+        waiting = new[] { "Is he okay? Is he scared? He looks scared.", "Biscuit's safe! Now me, please!" },
+        hooked = new[] { "Is Biscuit alright up there?", "Don't let go of him!", "Faster, it's past his dinner time!" },
+        yank = new string[0],
+        seated = new[] { "Who's a good boy? You are!", "He's never flown before. Neither have I.", "Biscuit, stop licking the pilot." },
+        rough = new[] { "BISCUIT!", "Careful! He gets sick!", "Oh no, oh no, oh no!" },
+        reviews = new[] { "Five stars! Biscuit loved it!", "Four stars. He only threw up once.", "Three stars. Biscuit is unsettled.", "Two stars. Biscuit bit someone. I don't blame him.", "One star. Biscuit will remember this." },
+        hup = "Coming, Biscuit!", settled = "Biscuit! Oh, you brave boy!", arrived = "Come on Biscuit, walkies!", fell = "Whoops! I'm okay!",
+    };
+    static readonly string[] CallingDog = { "Biscuit! BISCUIT! Come here, boy!", "I'm not leaving without Biscuit!", "He likes things that hold still!", "Biscuit, no! Not the edge!" };
+
+    Personality L => kind switch { Kind.ReclinerGuy => ReclinerLines, Kind.BackseatPilot => BackseatLines, Kind.DogPerson => DogLines, _ => GrandmaLines };
 
     /// <summary>The survivor of this kind in the scene (null if none).</summary>
     public static SurvivorBrain Find(Kind k)
@@ -162,6 +176,16 @@ public class SurvivorBrain : NetworkBehaviour
     {
         Vector3 toHeli = Flat(heli.transform.position - transform.position);
         if (toHeli.sqrMagnitude > 0.01f) input.yaw = Yaw(toHeli);
+
+        // Dog Person won't even look at the hook until Biscuit is safely aboard.
+        if (kind == Kind.DogPerson && dog != null && !dog.Aboard)
+        {
+            Vector3 toDog = Flat(dog.transform.position - transform.position);
+            if (toDog.sqrMagnitude > 0.01f) input.yaw = Yaw(toDog);
+            if (toDog.magnitude > 2.5f) input.moveZ = 0.7f;   // trailing after him, hopelessly
+            if (Time.time > nextRemark && toHeli.magnitude < 60f) { Say(Pick(CallingDog), 3f); nextRemark = Time.time + 7f; }
+            return;
+        }
 
         if (HookAvailable(out Vector3 hookPos))
         {
@@ -276,6 +300,8 @@ public class SurvivorBrain : NetworkBehaviour
         deliveredTo = zone;
         Enter(State.Delivered);
         Say(L.arrived, 3f);
+        if (kind == Kind.DogPerson && dog != null)
+            dog.FollowPerson(transform, heli.transform.TransformPoint(new Vector3(side * 2.2f, 0.3f, 0.9f)));
     }
 
     /// <summary>In-flight commentary: complaints when it's rough (which costs stars), chatter otherwise.</summary>
@@ -509,7 +535,8 @@ public class SurvivorBrain : NetworkBehaviour
         reported = false; deliveredTo = null;
         RescueStartedAt = -1f; RoughMoments = 0;
         Enter(State.Waiting);
-        Say(Pick(L.waiting), 3f);
+        Say(kind == Kind.DogPerson ? Pick(CallingDog) : Pick(L.waiting), 3f);
+        if (kind == Kind.DogPerson && dog != null) dog.Relocate(spot + transform.right * 1.5f + Vector3.up * 0.3f);
     }
 
     /// <summary>A clear spot on a flat roof 50-150 m from where she is, 6-26 m up, away from the hospital.</summary>

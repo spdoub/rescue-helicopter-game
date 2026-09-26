@@ -127,6 +127,7 @@ SUITE = [
     dict(name="solo_hover", scenario="solo_hover", duration=50),
     dict(name="rescue", scenario="rescue_crew", client_pilot="rescue", take_pilot_client=True, duration=330),
     dict(name="backseat_meddle", scenario="backseat_meddle", client_pilot="rescue-backseat-linger", take_pilot_client=True, duration=150),
+    dict(name="rescue_dogperson", scenario="rescue_dogperson", client_pilot="rescue-dogperson", take_pilot_client=True, duration=260),
     dict(name="rescue_backseat", scenario="rescue_backseat", client_pilot="rescue-backseat", take_pilot_client=True, duration=220),
     dict(name="rescue_recliner", scenario="rescue_recliner", client_pilot="rescue-recliner", take_pilot_client=True, duration=200),
     dict(name="walk", scenario="walk", duration=36, window=True),

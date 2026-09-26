@@ -56,8 +56,7 @@ public class CityGenerator : MonoBehaviour
 
     // submeshes / materials
     const int Brick = 0, TrimLight = 1, TrimDark = 2, Glass = 3, Frame = 4, Roof = 5, GlassLit = 6, Metal = 7, Wood = 8, Accent = 9;
-    static Vector3 keepClear2 = Vector3.one * 9999f;   // more pickup spots to keep clear (Recliner Guy, Backseat Pilot)
-    static Vector3 keepClear3 = Vector3.one * 9999f;
+    static readonly List<Vector3> clearSpots = new();   // survivors' pickup spots: keep their roofs clear around them
 
     static void Build(Transform city)
     {
@@ -66,12 +65,11 @@ public class CityGenerator : MonoBehaviour
         var env = GameObject.Find("Environment").transform;
 
         // The survivors' pickup roofs keep a clear landing/hoisting area around them.
-        var grandma = GameObject.Find("Grandma");
-        Vector3 keepClear = grandma ? grandma.transform.position : Vector3.one * 9999f;
-        var chairGo = GameObject.Find("ReclinerChair");
-        keepClear2 = chairGo ? chairGo.transform.position : Vector3.one * 9999f;
-        var bpGo = GameObject.Find("BackseatPilot");
-        keepClear3 = bpGo ? bpGo.transform.position : Vector3.one * 9999f;
+        clearSpots.Clear();
+        foreach (var sb in FindObjectsByType<SurvivorBrain>(FindObjectsSortMode.InstanceID)) clearSpots.Add(sb.transform.position);
+        foreach (var rc in FindObjectsByType<Recliner>(FindObjectsSortMode.InstanceID)) clearSpots.Add(rc.transform.position);
+        foreach (var dg in FindObjectsByType<Dog>(FindObjectsSortMode.InstanceID)) clearSpots.Add(dg.transform.position);
+        Vector3 keepClear = Vector3.one * 9999f;
 
         int n = 0;
         foreach (Transform b in env)
@@ -161,11 +159,11 @@ public class CityGenerator : MonoBehaviour
 
         // roof clutter
         Vector3 clearLocal = Quaternion.Inverse(rot) * (keepClear - basePos);
-        Vector3 clearLocal2 = Quaternion.Inverse(rot) * (keepClear2 - basePos);
-        bool second = Mathf.Abs(clearLocal2.y - h) < 3f && Mathf.Abs(clearLocal2.x) < w && Mathf.Abs(clearLocal2.z) < d;
-        if (second) { clearLocal = clearLocal2; }
-        Vector3 clearLocal3 = Quaternion.Inverse(rot) * (keepClear3 - basePos);
-        if (Mathf.Abs(clearLocal3.y - h) < 3f && Mathf.Abs(clearLocal3.x) < w && Mathf.Abs(clearLocal3.z) < d) clearLocal = clearLocal3;
+        foreach (var spot in clearSpots)
+        {
+            Vector3 l = Quaternion.Inverse(rot) * (spot - basePos);
+            if (Mathf.Abs(l.y - h) < 3f && Mathf.Abs(l.x) < w && Mathf.Abs(l.z) < d) { clearLocal = l; break; }
+        }
         RoofProps(mb, cols, w, d, h, rnd, new Vector2(clearLocal.x, clearLocal.z), Mathf.Abs(clearLocal.y - h) < 3f ? 5.5f : 0f);
 
         var mf = go.AddComponent<MeshFilter>();
