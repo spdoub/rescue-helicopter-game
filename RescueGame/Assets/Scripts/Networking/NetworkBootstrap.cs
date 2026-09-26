@@ -61,7 +61,8 @@ public class NetworkBootstrap : MonoBehaviour
         for (int i = 0; i < args.Length - 1; i++)
         {
             if (args[i] == "-shot") StartCoroutine(TestScreenshot(args[i + 1],
-                ArgFloat(args, "-shotpitch", 0f), ArgValue(args, "-shotview") == "front"));
+                ArgFloat(args, "-shotpitch", 0f), ArgValue(args, "-shotview") ?? "fp",
+                ArgFloat(args, "-shotdelay", 5f), ArgFloat(args, "-shotyaw", float.NaN)));
         }
 
         localAddress = FindLocalAddress();
@@ -79,13 +80,24 @@ public class NetworkBootstrap : MonoBehaviour
     static float ArgFloat(string[] args, string key, float fallback) =>
         float.TryParse(ArgValue(args, key), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : fallback;
 
-    IEnumerator TestScreenshot(string file, float pitch, bool front)
+    IEnumerator TestScreenshot(string file, float pitch, string view, float delay, float yaw)
     {
-        FirstPersonSeatCamera.ForcedView = front ? FirstPersonSeatCamera.View.Front : FirstPersonSeatCamera.View.FirstPerson;
-        float end = Time.time + 5f;
+        FirstPersonSeatCamera.ForcedView = view switch
+        {
+            "front" => FirstPersonSeatCamera.View.Front,
+            "side" => FirstPersonSeatCamera.View.Side,
+            "chase" => FirstPersonSeatCamera.View.HeliChase,
+            _ => FirstPersonSeatCamera.View.FirstPerson,
+        };
+        float end = Time.time + delay;
         while (Time.time < end)
         {
-            if (NetworkPlayer.Local != null) NetworkPlayer.Local.SetLookForTests(pitch);
+            // hold the look for the final second (bots may be steering before that)
+            if (NetworkPlayer.Local != null && end - Time.time < 1f)
+            {
+                if (!float.IsNaN(yaw) && heli != null) NetworkPlayer.Local.BotLook(heli.transform.eulerAngles.y + yaw, pitch);
+                else NetworkPlayer.Local.SetLookForTests(pitch);
+            }
             yield return null;
         }
         ScreenCapture.CaptureScreenshot(file);

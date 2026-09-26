@@ -218,14 +218,15 @@ public class CrewVisual : MonoBehaviour
         anim.SetLookAtPosition(Eye + look * 5f);
 
         var heli = player.SeatedAsPilot.Value ? FindHeli() : null;
+        var rig = heli ? heli.GetComponentInChildren<CockpitRig>() : null;
+        Vector3? leftGrip = heli ? (rig && rig.GripCollective ? rig.GripCollective.position : heli.TransformPoint(collectiveGrip)) : null;
+        Vector3? rightGrip = heli ? (rig && rig.GripCyclic ? rig.GripCyclic.position : heli.TransformPoint(stickGrip)) : null;
         HandIK(AvatarIKGoal.LeftHand, leftHand, -1f, look,
             player.HoldLeft.Value, player.HoldPointLeft.Value,
-            isLocal ? player.LocalReachLeft : player.ReachLeft.Value,
-            heli ? heli.TransformPoint(collectiveGrip) : (Vector3?)null);
+            isLocal ? player.LocalReachLeft : player.ReachLeft.Value, leftGrip);
         HandIK(AvatarIKGoal.RightHand, rightHand, 1f, look,
             player.HoldRight.Value, player.HoldPointRight.Value,
-            isLocal ? player.LocalReachRight : player.ReachRight.Value,
-            heli ? heli.TransformPoint(stickGrip) : (Vector3?)null);
+            isLocal ? player.LocalReachRight : player.ReachRight.Value, rightGrip);
 
         bool onFeet = player.Grounded.Value && !player.SeatedAsPilot.Value;
         FootIK(AvatarIKGoal.LeftFoot, anim.leftFeetBottomHeight, onFeet, ref leftFootWeight);

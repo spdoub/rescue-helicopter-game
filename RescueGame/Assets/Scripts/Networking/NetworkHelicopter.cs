@@ -17,6 +17,9 @@ public class NetworkHelicopter : NetworkBehaviour
     /// <summary>Client id of the current pilot (NoPilot if the seat is empty).</summary>
     public NetworkVariable<ulong> PilotClientId = new(NoPilot);
 
+    /// <summary>The controls being applied (collective, pitch, roll, yaw), so everyone sees the stick move.</summary>
+    public NetworkVariable<Vector4> ControlsSync = new();
+
     /// <summary>Test mode: the pilot flies a scripted pattern instead of reading devices (used by automated tests).</summary>
     public static bool Autopilot;
 
@@ -97,7 +100,10 @@ public class NetworkHelicopter : NetworkBehaviour
         if (IsServer)
         {
             bool fresh = Time.time - lastInputTime < InputTimeout && PilotClientId.Value != NoPilot;
-            controller.SetInput(fresh ? latestInput : HelicopterInput.None);
+            var applied = fresh ? latestInput : HelicopterInput.None;
+            controller.SetInput(applied);
+            var c = new Vector4(applied.collective, applied.pitch, applied.roll, applied.yaw);
+            if ((c - ControlsSync.Value).sqrMagnitude > 0.0004f) ControlsSync.Value = c;
         }
     }
 

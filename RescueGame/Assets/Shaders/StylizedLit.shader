@@ -18,6 +18,9 @@ Shader "RescueGame/Stylized Lit"
         _Ambient("Ambient Boost", Range(0, 1)) = 0.1
         _WorldUVScale("World-Space Texture Scale (0 = use mesh UVs)", Float) = 0
         [Toggle] _HideTagged("Hide Tagged Parts (first person)", Float) = 0
+        [HDR] _EmissionColor("Emission (glow)", Color) = (0,0,0,0)
+        _ShadowStrength("Shadow Strength (0 = ignore shadows)", Range(0, 1)) = 1
+        _ClipBoxCount("Hidden Zones (object space boxes, set from script)", Float) = 0
     }
 
     SubShader
@@ -39,7 +42,23 @@ Shader "RescueGame/Stylized Lit"
             half _Ambient;
             float _WorldUVScale;
             half _HideTagged;
+            half4 _EmissionColor;
+            half _ShadowStrength;
+            float _ClipBoxCount;
         CBUFFER_END
+        // Up to 6 object-space boxes where this surface is not drawn (the outer hull's bits that
+        // stick into the cabin). Set per material from HullInteriorClip.cs.
+        float4 _ClipMin[6];
+        float4 _ClipMax[6];
+        bool InsideClipBox(float3 p)
+        {
+            for (int k = 0; k < 6; k++)
+            {
+                if (k >= (int)_ClipBoxCount) break;
+                if (all(p > _ClipMin[k].xyz) && all(p < _ClipMax[k].xyz)) return true;
+            }
+            return false;
+        }
         ENDHLSL
 
         Pass
@@ -73,6 +92,7 @@ Shader "RescueGame/Stylized Lit"
                 float3 normalWS : TEXCOORD2;
                 half fogFactor : TEXCOORD3;
                 half hide : TEXCOORD4;
+                float3 positionOS : TEXCOORD5;
             };
 
             Varyings vert(Attributes v)
@@ -85,12 +105,14 @@ Shader "RescueGame/Stylized Lit"
                 o.uv = TRANSFORM_TEX(v.uv, _BaseMap);
                 o.fogFactor = ComputeFogFactor(pos.positionCS.z);
                 o.hide = v.hideTag.x * _HideTagged;
+                o.positionOS = v.positionOS.xyz;
                 return o;
             }
 
             half4 frag(Varyings i, bool frontFace : SV_IsFrontFace) : SV_Target
             {
                 clip(0.5 - i.hide);
+                if (_ClipBoxCount > 0 && InsideClipBox(i.positionOS)) discard;
                 if (!frontFace)
                 {
                     // Inside of a mesh: normally never seen (culled). For a first-person body with
@@ -119,12 +141,13 @@ Shader "RescueGame/Stylized Lit"
 
                 Light light = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
                 half wrapped = saturate((dot(n, light.direction) + _LightWrap) / (1 + _LightWrap));
-                half lit = wrapped * light.shadowAttenuation;
+                half lit = wrapped * lerp(1.0h, light.shadowAttenuation, _ShadowStrength);
 
                 half3 ambient = SampleSH(n) + _Ambient;
                 // Shadowed areas lean toward a warm purple tint instead of flat grey.
                 half3 shade = lerp(_ShadowTint.rgb * ambient, ambient + light.color, lit);
                 half3 color = albedo.rgb * shade;
+                color += _EmissionColor.rgb;
                 color = MixFog(color, i.fogFactor);
                 return half4(color, 1);
             }
