@@ -1,0 +1,30 @@
+# Secrets
+.env
+
+# Local tool installs (reinstall per SETUP_LOG.md)
+tools/unity-mcp-server/
+tools/blender-mcp/
+__pycache__/
+.DS_Store
+
+# Unity
+RescueGame/[Ll]ibrary/
+RescueGame/[Tt]emp/
+RescueGame/[Oo]bj/
+RescueGame/[Bb]uild/
+RescueGame/[Bb]uilds/
+RescueGame/[Ll]ogs/
+RescueGame/[Uu]ser[Ss]ettings/
+RescueGame/[Mm]emoryCaptures/
+RescueGame/[Rr]ecordings/
+RescueGame/.vs/
+RescueGame/.idea/
+RescueGame/*.csproj
+RescueGame/*.sln
+RescueGame/*.slnx
+RescueGame/*.pidb
+RescueGame/*.userprefs
+RescueGame/*.pdb
+RescueGame/*.apk
+RescueGame/*.unitypackage
+RescueGame/crashlytics-build.properties

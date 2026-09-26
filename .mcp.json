@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "blender": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/samwudel/Game/tools/blender-mcp",
+        "blender-mcp"
+      ],
+      "env": {}
+    },
+    "unity": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/Users/samwudel/Game/tools/unity-mcp-server/src/index.js"
+      ],
+      "env": {
+        "UNITY_HUB_PATH": "/Applications/Unity Hub.app/Contents/MacOS/Unity Hub",
+        "UNITY_BRIDGE_PORT": "7890"
+      }
+    },
+    "meshy": {
+      "type": "stdio",
+      "command": "/Users/samwudel/Game/tools/meshy-mcp.sh",
+      "args": [],
+      "env": {}
+    }
+  }
+}
