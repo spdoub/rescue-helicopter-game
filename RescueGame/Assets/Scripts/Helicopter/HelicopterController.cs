@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// Grey-box helicopter flight. Physics-based (Rigidbody) but with "assists" so it is
@@ -43,6 +42,12 @@ public class HelicopterController : MonoBehaviour
 
     public bool engineOn = true;
 
+    [Header("Networking")]
+    [Tooltip("Read the keyboard/gamepad on this machine. Turned off when NetworkHelicopter feeds input from the pilot.")]
+    public bool useLocalInput = true;
+    [Tooltip("Run the flight physics on this machine. Only the host does this in multiplayer.")]
+    public bool simulate = true;
+
     Rigidbody rb;
     float collective, pitchInput, rollInput, yawInput;
 
@@ -51,9 +56,18 @@ public class HelicopterController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
+    /// <summary>Set the controls from outside (e.g. the pilot's input arriving over the network).</summary>
+    public void SetInput(HelicopterInput input)
+    {
+        collective = input.collective;
+        pitchInput = input.pitch;
+        rollInput = input.roll;
+        yawInput = input.yaw;
+    }
+
     void Update()
     {
-        ReadInput();
+        if (useLocalInput) SetInput(HelicopterInput.ReadDevices());
 
         if (engineOn)
         {
@@ -62,42 +76,9 @@ public class HelicopterController : MonoBehaviour
         }
     }
 
-    void ReadInput()
-    {
-        collective = pitchInput = rollInput = yawInput = 0f;
-
-        var kb = Keyboard.current;
-        if (kb != null)
-        {
-            if (kb.spaceKey.isPressed) collective += 1f;
-            if (kb.leftShiftKey.isPressed) collective -= 1f;
-            if (kb.wKey.isPressed) pitchInput += 1f;
-            if (kb.sKey.isPressed) pitchInput -= 1f;
-            if (kb.dKey.isPressed) rollInput += 1f;
-            if (kb.aKey.isPressed) rollInput -= 1f;
-            if (kb.eKey.isPressed) yawInput += 1f;
-            if (kb.qKey.isPressed) yawInput -= 1f;
-        }
-
-        var pad = Gamepad.current;
-        if (pad != null)
-        {
-            Vector2 left = pad.leftStick.ReadValue();
-            pitchInput += left.y;
-            rollInput += left.x;
-            yawInput += pad.rightStick.ReadValue().x;
-            collective += pad.rightTrigger.ReadValue() - pad.leftTrigger.ReadValue();
-        }
-
-        collective = Mathf.Clamp(collective, -1f, 1f);
-        pitchInput = Mathf.Clamp(pitchInput, -1f, 1f);
-        rollInput = Mathf.Clamp(rollInput, -1f, 1f);
-        yawInput = Mathf.Clamp(yawInput, -1f, 1f);
-    }
-
     void FixedUpdate()
     {
-        if (!engineOn) return;
+        if (!engineOn || !simulate) return;
 
         ApplyLift();
         ApplyTilt();
