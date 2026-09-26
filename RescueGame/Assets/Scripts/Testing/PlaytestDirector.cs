@@ -481,7 +481,7 @@ public class PlaytestDirector : MonoBehaviour
                 Add(new WinchUntil("lower the hook to her", -1, d => W(d).HookEyePosition.y < G().transform.position.y + 0.6f || G().Current != SurvivorBrain.State.Waiting, 20f));
                 Add(new WinchUntil("she grabs the hook", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
                 Add(new WinchUntil("reel her up", 1, d => G().Current == SurvivorBrain.State.Boarding || G().Current == SurvivorBrain.State.Seated, 40f));
-                Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 150f));
+                Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 200f));
                 Add(new WinchUntil("payout", 0, d => RescueZone.All.Count > 0 && RescueZone.All[0].Rescued.Value >= 1, 20f));
                 break;
             }
@@ -626,7 +626,7 @@ public class PlaytestDirector : MonoBehaviour
                 var hv = d.Heli.GetComponent<Rigidbody>().linearVelocity; hv.y = 0f;
                 return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f
                     && (g.kind != SurvivorBrain.Kind.LedgeResident || hv.magnitude < 1.2f); // (ledge: settled, not still flying in over the roof)
-            }, 60f));
+            }, 150f));
             Add(new WinchUntil("let the hook down", -1, d => W(d).HookEyePosition.y < LowerTo(G()) || G().Current != SurvivorBrain.State.Waiting, 20f));
             Add(new WinchUntil("survivor hooked", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
             Add(new WinchUntil("let them settle", 0, d => d.StepTime > 1.5f, 3f));

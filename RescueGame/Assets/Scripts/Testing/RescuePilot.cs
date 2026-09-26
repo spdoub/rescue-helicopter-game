@@ -111,16 +111,18 @@ public class RescuePilot
                 // (turn to the ledge heading only once close: arrive nose-first, then swing side-on)
                 // (ledge: only once nearly stopped close by, and slowly: crew are standing at an open door)
                 bool turnIn = ledge && (phase == Phase.Hold || (Flat(target - h.position).magnitude < 10f && Flat(vel).magnitude < 3f));
-                return FlyTo(h, target, phase == Phase.Hold ? 2f : 7f, turnIn ? heading : (ledge ? h.eulerAngles.y : 0f), ledge ? 0.3f : 1f);
+                float far = Flat(target - h.position).magnitude;
+                float cruise = far > 120f ? 18f : 7f;   // long legs out to the island: get a move on
+                return FlyTo(h, target, phase == Phase.Hold ? 2f : cruise, turnIn ? heading : (ledge ? h.eulerAngles.y : 0f), ledge ? 0.3f : 1f);
             }
 
             case Phase.ToHospital:
             {
                 if (zone == null) return Hover(h.position, 0f);
                 Vector3 target = zone.transform.position + Vector3.up * 14f;
-                if (Flat(target - h.position).magnitude > 25f) target.y = CruiseAltitude;
+                if (Flat(target - h.position).magnitude > 25f) target.y = Mathf.Max(CruiseAltitude, h.position.y - 2f * Time.deltaTime * 6f); // (descend gently from the mountains)
                 if (Flat(target - h.position).magnitude < 1.5f && vel.magnitude < 1.2f && Mathf.Abs(Mathf.DeltaAngle(h.eulerAngles.y, LandHeading())) < 10f) Next(Phase.Land);
-                return FlyTo(h, target, 8f, Flat(target - h.position).magnitude < 20f ? LandHeading() : 0f);
+                return FlyTo(h, target, Flat(target - h.position).magnitude > 120f ? 18f : 8f, Flat(target - h.position).magnitude < 20f ? LandHeading() : 0f);
             }
 
             case Phase.Land:

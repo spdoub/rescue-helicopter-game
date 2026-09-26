@@ -229,6 +229,13 @@ public class SurvivorBrain : NetworkBehaviour
         stateSince = Time.time;
         if (IsServer) ScheduleFire();
         if (IsServer && kind == Kind.LedgeResident) PlaceOnLedge(); // the city is built by now: find him a ledge
+        // Dev builds: "-startwild N" puts this survivor's first call out on the island (N = place kind 1-5, 0 = any)
+        if (IsServer && Debug.isDebugBuild && kind != Kind.LedgeResident && kind != Kind.ReclinerGuy)
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            int at = System.Array.IndexOf(args, "-startwild");
+            if (at >= 0) { forceKind = at + 1 < args.Length && int.TryParse(args[at + 1], out int k) ? k : 0; if (FindWildSpot(out Vector3 s, out byte pl)) { Place.Value = pl; MoveTo(s); } forceKind = -1; }
+        }
     }
 
     // ------------------------------------------------------------------ host: one tick of thinking
@@ -625,8 +632,8 @@ public class SurvivorBrain : NetworkBehaviour
             Say(Pick(L.waiting), 3f);
             return;
         }
-        byte place = 0;
-        bool wild = IslandGenerator.Current != null && Random.value < WildChance && FindWildSpot(out Vector3 spot, out place);
+        byte place = 0; Vector3 spot = default;
+        bool wild = IslandGenerator.Current != null && Random.value < WildChance && FindWildSpot(out spot, out place);
         if (!wild && !FindRoofSpot(out spot)) { reportedAt = Time.time; return; }
         Place.Value = place;
         Weather.Instance?.Roll(); // new call, new weather
@@ -654,6 +661,20 @@ public class SurvivorBrain : NetworkBehaviour
         if (kind == Kind.DogPerson && dog != null) dog.Relocate(spot + transform.right * 1.5f + Vector3.up * 0.3f);
     }
 
+    int forceKind = -1;
+
+    /// <summary>Host: put them down somewhere (used at spawn for dev placement).</summary>
+    void MoveTo(Vector3 spot)
+    {
+        var rb = GetComponent<Rigidbody>();
+        body.StandUp(spot, null);
+        rb.position = transform.position; rb.linearVelocity = Vector3.zero;
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt) nt.Teleport(transform.position, transform.rotation, transform.localScale);
+        home = spot;
+        if (kind == Kind.DogPerson && dog != null) dog.Relocate(spot + transform.right * 1.5f + Vector3.up * 0.3f);
+    }
+
     /// <summary>Somewhere out on the island: a beach, a mountain shoulder, the cliff top, the lake shore or a forest clearing.</summary>
     bool FindWildSpot(out Vector3 spot, out byte place)
     {
@@ -662,7 +683,7 @@ public class SurvivorBrain : NetworkBehaviour
         int mask = GameLayers.Gameplay & ~(1 << gameObject.layer);
         for (int attempt = 0; attempt < 120; attempt++)
         {
-            int kind = 1 + Random.Range(0, 5);
+            int kind = forceKind > 0 ? forceKind : 1 + Random.Range(0, 5);
             float x, z;
             switch (kind)
             {
