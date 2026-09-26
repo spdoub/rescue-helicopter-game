@@ -13,7 +13,9 @@ using UnityEngine;
 /// - Walking backwards plays the walk in reverse; sideways/diagonal moves turn the legs.
 /// - Ragdoll: when knocked down the skeleton goes fully limp, loosely tethered to the physics
 ///   body so it flops around but stays where the player really is.
-/// - First person: your own head is hidden from your camera so you see your arms and legs.
+/// - First person: your own hips, torso, neck and head are hidden from your own camera (they still cast
+///   shadows and everyone else sees them), so you can never see inside your body; arms and legs stay.
+/// - Feet: never sink into the ground; each foot is lifted onto whatever is under it and tilted to match.
 /// Lives on the model (same object as the Animator).
 /// </summary>
 [RequireComponent(typeof(Animator))]
@@ -63,8 +65,12 @@ public class CrewVisual : MonoBehaviour
     /// <summary>Where your eyes are this frame: just in front of the animated head.</summary>
     public Vector3 EyePosition { get; private set; }
 
-    /// <summary>Show your own head too (set by the camera for the front/outside views).</summary>
+    /// <summary>Show your own head and torso too (set by the camera for the front/outside views).</summary>
     public static bool ShowOwnHead;
+
+    [Header("Feet")]
+    [Tooltip("How far below the animated foot to look for ground.")]
+    public float footProbe = 0.35f;
     public bool Ragdolled { get; private set; }
 
     Animator anim;
@@ -86,6 +92,12 @@ public class CrewVisual : MonoBehaviour
 
     class HandState { public float weight; public Vector3 pos; public bool init; }
     readonly HandState leftHand = new(), rightHand = new();
+    float leftFootWeight, rightFootWeight;
+
+    SkinnedMeshRenderer[] skins;
+    MaterialPropertyBlock hideBlock;
+    bool torsoTagged;
+    static readonly int HideTaggedId = Shader.PropertyToID("_HideTagged");
 
     static readonly int SpeedId = Animator.StringToHash("Speed");
     static readonly int DirectionId = Animator.StringToHash("Direction");
@@ -108,6 +120,8 @@ public class CrewVisual : MonoBehaviour
         leftUpperArm = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm);
         rightUpperArm = anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
 
+        skins = GetComponentsInChildren<SkinnedMeshRenderer>();
+        hideBlock = new MaterialPropertyBlock();
         bones = GetComponentsInChildren<Rigidbody>();
         hipsBody = hips ? hips.GetComponent<Rigidbody>() : null;
         SetRagdollPhysics(false);
@@ -197,6 +211,35 @@ public class CrewVisual : MonoBehaviour
             player.HoldRight.Value, player.HoldPointRight.Value,
             isLocal ? player.LocalReachRight : player.ReachRight.Value,
             heli ? heli.TransformPoint(stickGrip) : (Vector3?)null);
+
+        bool onFeet = player.Grounded.Value && !player.SeatedAsPilot.Value;
+        FootIK(AvatarIKGoal.LeftFoot, anim.leftFeetBottomHeight, onFeet, ref leftFootWeight);
+        FootIK(AvatarIKGoal.RightFoot, anim.rightFeetBottomHeight, onFeet, ref rightFootWeight);
+    }
+
+    /// <summary>Lift a foot out of the ground (never push it down) and tilt it to the surface.</summary>
+    void FootIK(AvatarIKGoal goal, float soleToAnkle, bool onFeet, ref float weight)
+    {
+        Vector3 ankle = anim.GetIKPosition(goal);
+        Quaternion rot = anim.GetIKRotation(goal);
+        float target = 0f;
+        Vector3 fixedAnkle = ankle; Quaternion fixedRot = rot;
+        int mask = GameLayers.Gameplay & ~(1 << GameLayers.Crew);
+        if (onFeet && Physics.Raycast(ankle + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 0.5f + footProbe, mask, QueryTriggerInteraction.Ignore))
+        {
+            float minAnkle = hit.point.y + soleToAnkle;
+            if (ankle.y < minAnkle + 0.02f)
+            {
+                fixedAnkle.y = Mathf.Max(ankle.y, minAnkle);
+                fixedRot = Quaternion.FromToRotation(Vector3.up, hit.normal) * rot;
+                target = 1f;
+            }
+        }
+        weight = Mathf.MoveTowards(weight, target, Time.deltaTime * 10f);
+        anim.SetIKPositionWeight(goal, weight);
+        anim.SetIKPosition(goal, fixedAnkle);
+        anim.SetIKRotationWeight(goal, weight * 0.7f);
+        anim.SetIKRotation(goal, fixedRot);
     }
 
     void HandIK(AvatarIKGoal goal, HandState hand, float side, Vector3 look, bool holding, Vector3 holdPoint, bool reaching, Vector3? seatGrip)
@@ -278,8 +321,57 @@ public class CrewVisual : MonoBehaviour
         }
         else if (body) EyePosition = body.Eye;
 
-        // First person: hide your own head (and helmet) so it doesn't block your camera.
-        if (head) head.localScale = isLocal && !ShowOwnHead ? Vector3.one * 0.001f : Vector3.one;
+        // First person: hide your own torso, neck and head from your camera (not from shadows or
+        // other players), so the camera can never end up inside your body.
+        if (isLocal && !torsoTagged) TagTorso();
+        if (torsoTagged)
+        {
+            float hide = isLocal && !ShowOwnHead ? 1f : 0f;
+            foreach (var smr in skins)
+            {
+                smr.GetPropertyBlock(hideBlock);
+                hideBlock.SetFloat(HideTaggedId, hide);
+                smr.SetPropertyBlock(hideBlock);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mark every vertex mostly driven by the hips, spine, chest, shoulders, neck or head (UV channel 3),
+    /// so the shader can hide them from this player's own camera. Arms, hands and legs stay.
+    /// Only done for your own character, on a private copy of the mesh.
+    /// </summary>
+    void TagTorso()
+    {
+        torsoTagged = true;
+        var hidden = new System.Collections.Generic.HashSet<Transform>();
+        foreach (var b in new[] { HumanBodyBones.Hips, HumanBodyBones.Spine, HumanBodyBones.Chest, HumanBodyBones.UpperChest,
+                                  HumanBodyBones.LeftShoulder, HumanBodyBones.RightShoulder })
+        {
+            var t = anim.GetBoneTransform(b);
+            if (t) hidden.Add(t);
+        }
+        if (neck) foreach (var t in neck.GetComponentsInChildren<Transform>()) hidden.Add(t);
+        else if (head) foreach (var t in head.GetComponentsInChildren<Transform>()) hidden.Add(t);
+
+        foreach (var smr in skins)
+        {
+            var mesh = Instantiate(smr.sharedMesh);
+            var weights = mesh.boneWeights;
+            var smrBones = smr.bones;
+            var tags = new System.Collections.Generic.List<Vector2>(weights.Length);
+            foreach (var w in weights)
+            {
+                float h = 0f;
+                if (w.boneIndex0 < smrBones.Length && hidden.Contains(smrBones[w.boneIndex0])) h += w.weight0;
+                if (w.boneIndex1 < smrBones.Length && hidden.Contains(smrBones[w.boneIndex1])) h += w.weight1;
+                if (w.boneIndex2 < smrBones.Length && hidden.Contains(smrBones[w.boneIndex2])) h += w.weight2;
+                if (w.boneIndex3 < smrBones.Length && hidden.Contains(smrBones[w.boneIndex3])) h += w.weight3;
+                tags.Add(new Vector2(h > 0.5f ? 1f : 0f, 0f));
+            }
+            mesh.SetUVs(3, tags);
+            smr.sharedMesh = mesh;
+        }
     }
 
     void FlopArm(Transform upperArm, bool busy, Vector3 offset)

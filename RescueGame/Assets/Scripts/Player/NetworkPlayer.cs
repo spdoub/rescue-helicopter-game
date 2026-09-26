@@ -54,6 +54,7 @@ public class NetworkPlayer : NetworkBehaviour
     public static bool ForceSeatForTests;
     public static bool HoldGrabForTests;   // test switch: look down and hold grab the whole time
     public static bool BoardForTests;      // test switch: walk forward and keep jumping (climb aboard)
+    public static bool RunForTests;        // test switch: sprint forward
 
     void Awake()
     {
@@ -111,7 +112,7 @@ public class NetworkPlayer : NetworkBehaviour
     [Rpc(SendTo.Owner)]
     void FaceRpc(float yaw)
     {
-        LookYaw = yaw;
+        LookYaw = RunForTests ? yaw + 180f : yaw; // test run heads away from the helicopter
         LookPitch = 0f;
     }
 
@@ -191,6 +192,7 @@ public class NetworkPlayer : NetworkBehaviour
         if (HoldGrabForTests) { i.grabLeft = i.grabRight = true; i.pitch = 60f; }
         LocalReachLeft = i.grabLeft;
         LocalReachRight = i.grabRight;
+        if (RunForTests) { i.moveZ = 1f; i.sprint = true; }
         if (BoardForTests && !OnHelicopter.Value) { i.moveZ = 1f; i.jump = Time.time % 1f < Time.fixedDeltaTime; }
         return i;
     }

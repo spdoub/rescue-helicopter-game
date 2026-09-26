@@ -54,6 +54,7 @@ public class NetworkBootstrap : MonoBehaviour
                 case "-takepilot": NetworkPlayer.ForceSeatForTests = true; break;
                 case "-testgrab": NetworkPlayer.HoldGrabForTests = true; break;
                 case "-testboard": NetworkPlayer.BoardForTests = true; break;
+                case "-shotrun": NetworkPlayer.RunForTests = true; break;
                 case "-client" when i + 1 < args.Length && !args[i + 1].StartsWith("-"): joinAddress = args[i + 1]; break;
             }
         }
