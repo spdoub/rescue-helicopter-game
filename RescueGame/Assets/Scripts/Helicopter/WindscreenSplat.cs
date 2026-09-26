@@ -54,7 +54,7 @@ public class WindscreenSplat : NetworkBehaviour
         if (splatSound) AudioSource.PlayClipAtPoint(splatSound, transform.TransformPoint(new Vector3(0f, 2f, 2.9f)), 1f);
         var s = new Splat { born = Time.time, size = size };
         s.tint = kind switch { 0 => new Color(0.92f, 0.9f, 0.8f, 0.92f), 1 => new Color(0.55f, 0.25f, 0.2f, 0.9f), _ => new Color(0.9f, 0.88f, 0.7f, 0.85f) };
-        var go = GameObject.CreatePrimitive(PrimitiveType.Quad); go.name = "Splat"; Destroy(go.GetComponent<Collider>());
+        var go = GameObject.CreatePrimitive(PrimitiveType.Quad); go.name = "Splat"; DestroyImmediate(go.GetComponent<Collider>());
         go.transform.SetParent(transform, false);
         // on the inside face of the windscreen (raked back), at the chosen spot
         go.transform.localPosition = new Vector3(spot.x, 2.02f + spot.y, 2.84f - spot.y * 0.55f);
@@ -66,7 +66,7 @@ public class WindscreenSplat : NetworkBehaviour
         // a few drips
         for (int i = 0; i < 3; i++)
         {
-            var d = GameObject.CreatePrimitive(PrimitiveType.Quad); d.name = "Drip"; Destroy(d.GetComponent<Collider>());
+            var d = GameObject.CreatePrimitive(PrimitiveType.Quad); d.name = "Drip"; DestroyImmediate(d.GetComponent<Collider>());
             d.transform.SetParent(go.transform, false);
             d.transform.localPosition = new Vector3(Random.Range(-0.3f, 0.3f), -0.5f - i * 0.35f - Random.value * 0.3f, -0.001f);
             d.transform.localScale = new Vector3(0.18f, 0.5f + i * 0.2f, 1f);

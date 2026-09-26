@@ -32,7 +32,7 @@ public class IslandMap : MonoBehaviour
     void Place(string name, Vector3 local, Quaternion rot, float width)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        go.name = name; Destroy(go.GetComponent<Collider>());
+        go.name = name; DestroyImmediate(go.GetComponent<Collider>());
         go.transform.SetParent(heli, false);
         go.transform.localPosition = local; go.transform.localRotation = rot;
         go.transform.localScale = new Vector3(width, width * H / (float)W, 1f);
@@ -43,7 +43,7 @@ public class IslandMap : MonoBehaviour
         // a frame of tape at the corners
         foreach (var (cx, cy) in new[] { (-0.46f, 0.46f), (0.46f, 0.46f), (-0.46f, -0.46f), (0.46f, -0.46f) })
         {
-            var t = GameObject.CreatePrimitive(PrimitiveType.Quad); t.name = "Tape"; Destroy(t.GetComponent<Collider>());
+            var t = GameObject.CreatePrimitive(PrimitiveType.Quad); t.name = "Tape"; DestroyImmediate(t.GetComponent<Collider>());
             t.transform.SetParent(go.transform, false); t.transform.localPosition = new Vector3(cx, cy, -0.002f);
             t.transform.localRotation = Quaternion.Euler(0f, 0f, cx * cy > 0f ? 45f : -45f); t.transform.localScale = new Vector3(0.22f, 0.08f, 1f);
             var tr = t.GetComponent<Renderer>(); tr.sharedMaterial = pinMaterial; var mpb = new MaterialPropertyBlock(); mpb.SetColor("_BaseColor", new Color(0.7f, 0.7f, 0.66f, 1f)); tr.SetPropertyBlock(mpb);
@@ -110,7 +110,7 @@ public class IslandMap : MonoBehaviour
         int need = wanted.Count * maps.Count;
         while (pins.Count < need)
         {
-            var p = GameObject.CreatePrimitive(PrimitiveType.Quad); p.name = "Pin"; Destroy(p.GetComponent<Collider>());
+            var p = GameObject.CreatePrimitive(PrimitiveType.Quad); p.name = "Pin"; DestroyImmediate(p.GetComponent<Collider>());
             p.GetComponent<Renderer>().sharedMaterial = pinMaterial; p.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             pins.Add(p.transform);
         }
