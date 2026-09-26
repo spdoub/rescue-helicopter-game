@@ -19,6 +19,9 @@ public class NetworkPlayer : NetworkBehaviour
 
     public float mouseSensitivity = 0.12f;
 
+    /// <summary>This player's animated body (registered by CrewVisual; it detaches while ragdolled).</summary>
+    public CrewVisual Visual { get; set; }
+
     public NetworkVariable<bool> SeatedAsPilot = new();
     public NetworkVariable<bool> OnHelicopter = new();
     public NetworkVariable<bool> KnockedDown = new();

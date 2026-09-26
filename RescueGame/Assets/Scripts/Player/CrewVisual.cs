@@ -56,6 +56,7 @@ public class CrewVisual : MonoBehaviour
     {
         anim = GetComponent<Animator>();
         player = GetComponentInParent<NetworkPlayer>();
+        if (player) player.Visual = this;
         body = GetComponentInParent<CrewBody>();
         root = transform.parent;
         localOffset = transform.localPosition;

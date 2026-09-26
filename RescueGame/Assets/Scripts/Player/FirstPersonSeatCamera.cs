@@ -85,7 +85,11 @@ public class FirstPersonSeatCamera : MonoBehaviour
             else
             {
                 // On your feet: eyes at head height, horizon kept level.
-                transform.position = me.GetComponent<CrewBody>().Eye;
+                // Knocked flat: ride along with the floppy ragdoll's head.
+                var visual = me.Visual; // the model detaches from the body while ragdolled
+                Vector3 eyePos = me.GetComponent<CrewBody>().Eye;
+                if (visual != null && visual.Ragdolled) eyePos = visual.HeadPosition;
+                transform.position = Vector3.Lerp(transform.position, eyePos, visual != null && visual.Ragdolled ? 0.35f : 1f);
                 transform.rotation = Quaternion.Euler(me.LookPitch, me.LookYaw, 0f);
             }
             return;
