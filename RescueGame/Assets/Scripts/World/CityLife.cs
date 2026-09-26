@@ -394,6 +394,7 @@ public class CityLife : MonoBehaviour
             }
             flocks.Add(fl);
         }
+        foreach (var fl in flocks) WindscreenSplat.RegisterBirds(fl.birds);
     }
 
     void UpdateBirds(double T)

@@ -173,6 +173,8 @@ public class IslandLife : MonoBehaviour
             Part(b, PrimitiveType.Cube, "WingR", new Vector3(0.38f, 0f, 0f), new Vector3(0.7f, 0.03f, 0.22f), Gull).transform.localRotation = Quaternion.Euler(0f, 0f, -10f);
             gulls.Add((b, 14f + (float)rnd.NextDouble() * 22f, (float)rnd.NextDouble() * 6.28f));
         }
+        var gt = new List<Transform>(); foreach (var g in gulls) gt.Add(g.t);
+        WindscreenSplat.RegisterBirds(gt);
     }
 
     // ------------------------------------------------------------------ lighthouse

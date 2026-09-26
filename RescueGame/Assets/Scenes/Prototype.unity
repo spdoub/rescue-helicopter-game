@@ -429,6 +429,86 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.3, y: 0.34, z: 0.72}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &132115044
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 132115046}
+  - component: {fileID: 132115045}
+  m_Layer: 0
+  m_Name: Dispatch
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &132115045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 132115044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a4e55e243b1b4c85a998a5532d497cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Dispatcher
+  lines:
+  - key: call_beach
+    clip: {fileID: 8300000, guid: 2e8b595a8da2c4a24bd95aae8d802b54, type: 3}
+    text: Caller stuck on the beach down by the pier, tide's coming in.
+  - key: call_cliff
+    clip: {fileID: 8300000, guid: 2b3bb7e55917f407b8348908b380bef9, type: 3}
+    text: Person on the cliff top out west, near the lighthouse.
+  - key: call_forest
+    clip: {fileID: 8300000, guid: 9c95e1b2ee8e94e20951ad4a12975f57, type: 3}
+    text: Someone's lost in the forest. Look for the waving.
+  - key: call_gondola
+    clip: {fileID: 8300000, guid: 77c0581f37fe843ff91e4b849b1f13a2, type: 3}
+    text: The cable car's stuck mid-span with someone on top of it. Mind the cables.
+  - key: call_lake
+    clip: {fileID: 8300000, guid: d47ab19785e424883a1e9c45bf1ffb69, type: 3}
+    text: Someone on the lake shore, east side.
+  - key: call_ledge
+    clip: {fileID: 8300000, guid: b3c0d905f87b34961bbefb755c45ac0b, type: 3}
+    text: Neighbours report a man on a ledge downtown. He says he's fine. He is not
+      fine.
+  - key: call_mountain
+    clip: {fileID: 8300000, guid: 77622fb7e8e62415fa85777ffb639bbd, type: 3}
+    text: Hiker in trouble up on the mountain. Watch the updrafts up there.
+  - key: call_rooftop
+    clip: {fileID: 8300000, guid: 6e1d135dc053548c89f717dc82ce2126, type: 3}
+    text: 'New call: someone stranded on a rooftop in town. Get airborne.'
+  - key: delivered
+    clip: {fileID: 8300000, guid: 3924840bc95204418a237af6e7918092, type: 3}
+    text: Nice work, Rescue One. Patient's in good hands. Stand by for the next one.
+  - key: delivered_rough
+    clip: {fileID: 8300000, guid: 0e7076699e83e411bac91ee1f89b1991, type: 3}
+    text: Patient delivered. Uh, they've asked to speak to a manager.
+  - key: welcome
+    clip: {fileID: 8300000, guid: b82a9174bd2df4c2b841ca5b0a8d261e, type: 3}
+    text: Morning, crew. Coffee's on the dash. Calls are coming in, get her started.
+  volume: 0.85
+--- !u!4 &132115046
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 132115044}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &159342777
 GameObject:
   m_ObjectHideFlags: 0
@@ -5920,6 +6000,8 @@ GameObject:
   - component: {fileID: 1229749796}
   - component: {fileID: 1229749797}
   - component: {fileID: 1229749798}
+  - component: {fileID: 1229749799}
+  - component: {fileID: 1229749800}
   m_Layer: 0
   m_Name: Helicopter
   m_TagString: Untagged
@@ -6402,6 +6484,37 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: -100
+--- !u!114 &1229749799
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7af3a2b8394514068a8e558a184f26e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IslandMap
+  paperMaterial: {fileID: 2100000, guid: cf7d466be64434120a4ee776e54eb71e, type: 2}
+  pinMaterial: {fileID: 2100000, guid: cf7d466be64434120a4ee776e54eb71e, type: 2}
+--- !u!114 &1229749800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 572036a2fa3c44582ac9192558d1b75b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WindscreenSplat
+  ShowTopMostFoldoutHeaderGroup: 1
+  splatMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
+  splatSound: {fileID: 8300000, guid: acc9f3a0867ec4dd8a5ae79d04ab3cd7, type: 3}
+  maxSplats: 4
+  fadeSeconds: 45
 --- !u!1 &1230215337
 GameObject:
   m_ObjectHideFlags: 0
@@ -38564,3 +38677,4 @@ SceneRoots:
   - {fileID: 1391388006}
   - {fileID: 1407406776}
   - {fileID: 1304368634}
+  - {fileID: 132115046}

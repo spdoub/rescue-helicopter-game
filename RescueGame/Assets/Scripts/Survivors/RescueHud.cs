@@ -41,6 +41,8 @@ public class RescueHud : MonoBehaviour
         keyCap.normal.background = Solid(new Color(1f, 0.84f, 0.2f)); keyCap.normal.textColor = new Color(0.1f, 0.08f, 0.05f);
         promptStyle = new GUIStyle(GUI.skin.label) { fontSize = 19, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
         promptStyle.normal.textColor = Color.white;
+        radioStyle = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Italic, richText = true, alignment = TextAnchor.MiddleCenter };
+        radioStyle.normal.textColor = new Color(0.9f, 0.95f, 1f);
     }
 
     static Texture2D Solid(Color c)
@@ -240,7 +242,16 @@ public class RescueHud : MonoBehaviour
         }
         UpgradePrompt(cam, cash);
         ActionPrompt();
+        // the radio: dispatcher subtitle along the bottom
+        if (!string.IsNullOrEmpty(Dispatcher.Subtitle))
+        {
+            float w = Mathf.Min(900f, Screen.width - 40f);
+            var r = new Rect((Screen.width - w) / 2f, Screen.height - 96f, w, 44f);
+            GUI.Box(r, "", promptBox);
+            Outlined(new Rect(r.x + 12f, r.y + 8f, r.width - 24f, 30f), "<color=#ffd633>DISPATCH:</color> " + Dispatcher.Subtitle, radioStyle, TextAnchor.MiddleCenter);
+        }
     }
+    GUIStyle radioStyle;
 
     /// <summary>The one thing you can do right now, as a key-cap prompt just under the centre of the screen:
     /// take the controls, sit down, get up, open or close a door, work the winch.</summary>

@@ -226,6 +226,45 @@ public class PlaytestDirector : MonoBehaviour
         }
     }
 
+    /// <summary>The whole hook-and-reel job at the winch box, with the retries a person would do: lower the
+    /// hook while the survivor is waiting (and stop paying out once it's low enough), pause a moment when
+    /// they've grabbed on, reel them up, and if they drop off on the way, lower again.</summary>
+    class HookAndReel : Step
+    {
+        readonly Func<PlaytestDirector, SurvivorBrain> who; readonly Func<SurvivorBrain, float> lowerTo;
+        float hookedAt = -1f, lastLog;
+        public HookAndReel(Func<PlaytestDirector, SurvivorBrain> who, Func<SurvivorBrain, float> lowerTo, float timeout) { this.who = who; this.lowerTo = lowerTo; this.timeout = timeout; }
+        public override string Name => "hook and reel";
+        public override bool Tick(PlaytestDirector d, float e)
+        {
+            var w = d.Heli.GetComponent<NetworkWinch>();
+            var g = who(d);
+            Vector3 to = w.ControlPoint - d.Me.GetComponent<CrewBody>().Eye; Vector3 flat = new Vector3(to.x, 0f, to.z);
+            if (flat.sqrMagnitude > 0.0001f) d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
+            var body = d.Me.GetComponent<CrewBody>();
+            bool dangling = !d.Me.OnHelicopter.Value && body.IsHolding && !body.IsGrounded;
+            if (dangling) { NetworkPlayer.BotOverride = new PlayerInput { moveZ = 1f, grabLeft = true }; if (e % 1f < 0.05f) NetworkPlayer.BotJumps = 1; return false; }
+            sbyte dir = 0;
+            switch (g.Current)
+            {
+                case SurvivorBrain.State.Waiting:
+                    hookedAt = -1f;
+                    dir = w.HookEyePosition.y > lowerTo(g) ? (sbyte)-1 : (sbyte)0;
+                    break;
+                case SurvivorBrain.State.Hooked:
+                    if (hookedAt < 0f) hookedAt = e;
+                    dir = e - hookedAt > 1.5f ? (sbyte)1 : (sbyte)0;
+                    break;
+                default:
+                    NetworkPlayer.BotOverride = new PlayerInput { grabLeft = true };
+                    return true; // boarding / seated
+            }
+            if (e - lastLog > 10f) { lastLog = e; Debug.Log($"[Playtest] hook and reel: {g.displayName} {g.Current}, cable {w.Length.Value:F1} m, dir {dir}"); }
+            NetworkPlayer.BotOverride = new PlayerInput { winch = dir, grabLeft = true };
+            return false;
+        }
+    }
+
     /// <summary>Do something once (a key press, a measurement).</summary>
     class Lambda : Step
     {
@@ -631,10 +670,7 @@ public class PlaytestDirector : MonoBehaviour
                 return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f
                     && (g.kind != SurvivorBrain.Kind.LedgeResident || hv.magnitude < 1.2f); // (ledge: settled, not still flying in over the roof)
             }, 150f));
-            Add(new WinchUntil("let the hook down", -1, d => W(d).HookEyePosition.y < LowerTo(G()) || G().Current != SurvivorBrain.State.Waiting, 20f));
-            Add(new WinchUntil("survivor hooked", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));
-            Add(new WinchUntil("let them settle", 0, d => d.StepTime > 1.5f, 3f));
-            Add(new WinchUntil("reel them up", 1, d => G().Current == SurvivorBrain.State.Boarding || G().Current == SurvivorBrain.State.Seated, 40f));
+            Add(new HookAndReel(d => G(), LowerTo, 110f));
             Add(new WinchUntil("aboard", 0, d => G().Current == SurvivorBrain.State.Seated, 20f));
             Add(new WinchUntil("delivered to the hospital", 0, d => G().Current == SurvivorBrain.State.Delivered, 150f));
             Add(new WinchUntil($"payout #{r}", 0, d => RescueZone.All.Count > 0 && RescueZone.All[0].Rescued.Value >= r, 20f));

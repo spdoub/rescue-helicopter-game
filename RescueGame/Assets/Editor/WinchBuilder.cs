@@ -199,6 +199,41 @@ public static class WinchBuilder
         RenderSettings.fogStartDistance = 80f; RenderSettings.fogEndDistance = 1300f;
         foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None)) { cam.farClipPlane = 3000f; EditorUtility.SetDirty(cam); }
 
+        // bird strikes on the windscreen
+        var ws = heli.GetComponent<WindscreenSplat>(); if (!ws) ws = heli.AddComponent<WindscreenSplat>();
+        ws.splatMaterial = smoke; ws.splatSound = C("bird_splat");
+        EditorUtility.SetDirty(ws);
+
+        // the paper map of the island (dash + cabin wall)
+        var map = heli.GetComponent<IslandMap>(); if (!map) map = heli.AddComponent<IslandMap>();
+        map.paperMaterial = painted; map.pinMaterial = painted;
+        EditorUtility.SetDirty(map);
+
+        // the dispatcher on the radio
+        var dispGo = GameObject.Find("Dispatch") ?? new GameObject("Dispatch");
+        var disp = dispGo.GetComponent<Dispatcher>(); if (!disp) disp = dispGo.AddComponent<Dispatcher>();
+        disp.lines.Clear();
+        var texts = new System.Collections.Generic.Dictionary<string, string>
+        {
+            ["call_rooftop"] = "New call: someone stranded on a rooftop in town. Get airborne.",
+            ["call_beach"] = "Caller stuck on the beach down by the pier, tide's coming in.",
+            ["call_mountain"] = "Hiker in trouble up on the mountain. Watch the updrafts up there.",
+            ["call_cliff"] = "Person on the cliff top out west, near the lighthouse.",
+            ["call_lake"] = "Someone on the lake shore, east side.",
+            ["call_forest"] = "Someone's lost in the forest. Look for the waving.",
+            ["call_gondola"] = "The cable car's stuck mid-span with someone on top of it. Mind the cables.",
+            ["call_ledge"] = "Neighbours report a man on a ledge downtown. He says he's fine. He is not fine.",
+            ["delivered"] = "Nice work, Rescue One. Patient's in good hands. Stand by for the next one.",
+            ["delivered_rough"] = "Patient delivered. Uh, they've asked to speak to a manager.",
+            ["welcome"] = "Morning, crew. Coffee's on the dash. Calls are coming in, get her started.",
+        };
+        foreach (var guid in AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/Audio/Dispatch" }))
+        {
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
+            disp.lines.Add(new Dispatcher.Line { key = clip.name, clip = clip, text = texts.TryGetValue(clip.name, out var t) ? t : clip.name });
+        }
+        EditorUtility.SetDirty(disp);
+
         // city life: traffic, people, street furniture, ambience (built at load by CityLife)
         var cityGo = GameObject.Find("City");
         if (cityGo)

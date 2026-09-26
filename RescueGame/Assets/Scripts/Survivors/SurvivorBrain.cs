@@ -828,7 +828,7 @@ public class SurvivorBrain : NetworkBehaviour
     {
         var ls = LedgeSpot.Value;
         Vector3 local = Quaternion.Euler(0f, -ls.w, 0f) * Flat(p - new Vector3(ls.x, ls.y, ls.z)); // z = out from the wall, x = along it
-        return Mathf.Abs(local.x) < 1.3f && local.z < 1.1f && local.z > -0.3f;
+        return Mathf.Abs(local.x) < 1.3f && local.z < 1.3f && local.z > -0.3f;
     }
 
     /// <summary>Put him on a ledge a few metres under the roofline of some building, facing open street.</summary>
