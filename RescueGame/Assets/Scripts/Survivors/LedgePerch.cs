@@ -73,11 +73,11 @@ public class LedgePerch : MonoBehaviour
         root = new GameObject("Ledge_" + brain.displayName).transform;
         root.SetPositionAndRotation(new Vector3(s.x, s.y, s.z), Quaternion.Euler(0f, s.w, 0f));
         // (local: +z = out from the wall, x = along it, origin = where he stands on top of the slab; the wall is at z = -0.45)
-        Box("Slab", new Vector3(0f, -0.14f, 0.25f), new Vector3(3.6f, 0.28f, 1.4f), Stone, true);
-        Box("SlabLip", new Vector3(0f, -0.3f, 0.9f), new Vector3(3.7f, 0.08f, 0.12f), StoneDark, false);
+        Box("Slab", new Vector3(0f, -0.14f, 0.45f), new Vector3(3.6f, 0.28f, 1.8f), Stone, true);
+        Box("SlabLip", new Vector3(0f, -0.3f, 1.3f), new Vector3(3.7f, 0.08f, 0.12f), StoneDark, false);
         for (int i = -1; i <= 1; i += 2)
         {
-            var br = Box("Bracket", new Vector3(i * 1.3f, -0.6f, -0.05f), new Vector3(0.22f, 0.65f, 0.6f), StoneDark, false);
+            var br = Box("Bracket", new Vector3(i * 1.3f, -0.65f, 0.05f), new Vector3(0.22f, 0.75f, 0.8f), StoneDark, false);
             br.transform.localRotation = Quaternion.Euler(-28f, 0f, 0f);
         }
         // his window: frame, dark glass, a curtain pulled half across

@@ -600,7 +600,9 @@ public class PlaytestDirector : MonoBehaviour
             {
                 var g = G(); if (g == null) return false;
                 Vector3 tip = W(d).TipPosition, gp = g.chair != null ? g.chair.liftPoint.position : g.transform.position; tip.y = gp.y = 0f;
-                return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f;
+                var hv = d.Heli.GetComponent<Rigidbody>().linearVelocity; hv.y = 0f;
+                return Vector3.Distance(tip, gp) < 2f && d.Heli.transform.position.y > g.transform.position.y + 4f
+                    && (g.kind != SurvivorBrain.Kind.LedgeResident || hv.magnitude < 1.2f); // (ledge: settled, not still flying in over the roof)
             }, 60f));
             Add(new WinchUntil("let the hook down", -1, d => W(d).HookEyePosition.y < LowerTo(G()) || G().Current != SurvivorBrain.State.Waiting, 20f));
             Add(new WinchUntil("survivor hooked", 0, d => G().Current == SurvivorBrain.State.Hooked, 25f));

@@ -63,7 +63,7 @@ public class RescuePilot
                 if (ledge)
                 {
                     var ls = survivor.LedgeSpot.Value;
-                    over = new Vector3(ls.x, ls.y + 1f, ls.z) + Quaternion.Euler(0f, ls.w, 0f) * Vector3.forward * 0.6f;
+                    over = new Vector3(ls.x, ls.y + 1f, ls.z) + Quaternion.Euler(0f, ls.w, 0f) * Vector3.forward * 1.0f;
                     heading = ls.w + 90f;
                     rot = Quaternion.Euler(0f, heading, 0f);
                 }
@@ -82,8 +82,18 @@ public class RescuePilot
                     if (w && w.hook && w.Length.Value > 2f)
                     {
                         Vector3 miss = Flat(over - w.hook.position);
-                        if (miss.magnitude > 0.4f) holdXZ += Vector3.ClampMagnitude(miss, 1f) * 0.5f * Time.deltaTime;
+                        bool hangingFree = Flat(w.hook.position - w.TipPosition).magnitude < 4f && w.hook.position.y > over.y - 1.5f;
+                        if (hangingFree && miss.magnitude > 0.4f) holdXZ += Vector3.ClampMagnitude(miss, 1f) * 0.5f * Time.deltaTime;
                     }
+                }
+                if (phase == Phase.Hold && ledge)
+                {
+                    // keep the hoist well out from the wall so the cable clears the roof's cornice
+                    var ls = survivor.LedgeSpot.Value;
+                    Vector3 n = Quaternion.Euler(0f, ls.w, 0f) * Vector3.forward, wallPt = new Vector3(ls.x, 0f, ls.z) - n * 0.45f;
+                    Vector3 tipXZ = Flat(holdXZ + rot * new Vector3(1.4f, 0f, 0.85f));
+                    float outFromWall = Vector3.Dot(tipXZ - Flat(wallPt), n);
+                    if (outFromWall < 1.2f) holdXZ += n * (1.2f - outFromWall);
                 }
                 if (phase == Phase.Hold) { target.x = holdXZ.x; target.z = holdXZ.z; }
                 if (phase == Phase.ToPickup && Flat(target - h.position).magnitude < (ledge ? 2.5f : 1.2f) && vel.magnitude < (ledge ? 1.5f : 1f)
