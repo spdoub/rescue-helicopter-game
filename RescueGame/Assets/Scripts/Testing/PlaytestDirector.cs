@@ -519,6 +519,25 @@ public class PlaytestDirector : MonoBehaviour
                 break;
             }
 
+            case "pizza": // climb in, get hungry (test), look at the pizza box, F: a slice goes and fullness comes back
+            {
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new Lambda("get hungry (test)", d => { var h = d.Me.GetComponent<CrewHunger>(); if (h && NetworkManager.Singleton.IsServer) h.Fullness.Value = 0.1f; }));
+                Add(new GoTo("over to the box", d => PizzaBox.Instance.BoxPosition + d.Heli.transform.right * 0.7f + Vector3.up * 0.04f, 0.3f, 8f));
+                Add(new Lambda("look at the box", d =>
+                {
+                    Vector3 to = PizzaBox.Instance.BoxPosition - Camera.main.transform.position; Vector3 flat = new Vector3(to.x, 0f, to.z);
+                    d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y - d.Heli.transform.eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
+                }));
+                Add(new Act("settle", 0.8f));
+                Add(new Until("aiming at the box", d => PizzaBox.Instance.Aimed(Camera.main), 3f));
+                Add(new Lambda("press F", d => d.Me.Use()));
+                Add(new Until("a slice gone, fuller", d => PizzaBox.Instance.Slices.Value == 7 && d.Me.GetComponent<CrewHunger>().Fullness.Value > 0.4f, 3f));
+                break;
+            }
+
             case "rescue_crew": // winch operator for a full rescue (someone else flies with the "rescue" pilot bot)
                 RescueRounds(SurvivorBrain.Kind.StrongGrandma, 2, door, cabin);
                 break;

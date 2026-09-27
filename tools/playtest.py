@@ -129,6 +129,7 @@ SUITE = [
     dict(name="upgrade", scenario="upgrade", duration=40),
     dict(name="sit", scenario="sit", duration=45),
     dict(name="drink", scenario="drink", duration=45),
+    dict(name="pizza", scenario="pizza", duration=45),
     dict(name="winch", scenario="winch", duration=30),
     dict(name="solo_hover", scenario="solo_hover", duration=50),
     dict(name="crash", scenario="crash", duration=50),

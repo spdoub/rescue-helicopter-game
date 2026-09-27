@@ -98,6 +98,13 @@ public class RescueHud : MonoBehaviour
             objective.normal.textColor = Color.white;
             y += 30f;
         }
+        var hunger = NetworkPlayer.Local ? NetworkPlayer.Local.GetComponent<CrewHunger>() : null;
+        if (hunger != null && hunger.IsSpawned && hunger.Starving)
+        {
+            fuelStyle.normal.textColor = Mathf.Repeat(Time.time, 1f) < 0.5f ? new Color(1f, 0.55f, 0.3f) : Color.white;
+            Outlined(new Rect(26, y - 2, 900, 32), "YOU'RE STARVING - weak grip. Eat a slice from the pizza box (look at it, F)", fuelStyle);
+            y += 30f;
+        }
         var buzz = PilotBuzz.Instance;
         if (buzz != null && buzz.IsSpawned && (buzz.Low || buzz.Jittery))
         {
@@ -274,6 +281,7 @@ public class RescueHud : MonoBehaviour
         if (UpgradeBoard.Instance && UpgradeBoard.Instance.Aimed(Camera.main) >= 0) return; // the board has its own
         var lines = new System.Collections.Generic.List<(string key, string what)>();
         if (PilotBuzz.Instance && PilotBuzz.Instance.Aimed(Camera.main)) lines.Add(("F", PilotBuzz.Instance.Low ? "Drink the energy drink (you need it)" : "Drink the energy drink"));
+        if (PizzaBox.Instance && PizzaBox.Instance.Aimed(Camera.main)) lines.Add(("F", PizzaBox.Instance.Slices.Value > 0 ? $"Eat a slice ({PizzaBox.Instance.Slices.Value} left)" : "Empty box (refills at the helipad)"));
         if (me.SeatedAsPilot.Value) lines.Add(("E", "Leave the controls"));
         else if (me.SeatedPassenger.Value) lines.Add(("E", "Stand up"));
         else

@@ -1700,6 +1700,7 @@ GameObject:
   - component: {fileID: 5996100150195507428}
   - component: {fileID: 4848537081854615691}
   - component: {fileID: 7817203004024959788}
+  - component: {fileID: 792752551328180597}
   m_Layer: 8
   m_Name: Survivor_ReclinerGuy
   m_TagString: Untagged
@@ -1995,6 +1996,7 @@ MonoBehaviour:
   kind: 1
   displayName: Recliner Guy
   chair: {fileID: 0}
+  dog: {fileID: 0}
   payBonus: 400
   hookNoticeRange: 4
   yankForce: 2600
@@ -2145,6 +2147,30 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  Fire:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+  Singed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  LedgeSpot:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: {x: 0, y: 0, z: 0, w: 0}
+  Agreed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  Place:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
 --- !u!114 &7817203004024959788
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2203,6 +2229,27 @@ MonoBehaviour:
   - key: you_re_blocking_the_signal
     clip: {fileID: 8300000, guid: 62616ac6fee624c79a3ceca9fac5f232, type: 3}
   volume: 1
+--- !u!114 &792752551328180597
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7059004466631082238}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b261947879314634b9c464a67a53626, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CrewHunger
+  ShowTopMostFoldoutHeaderGroup: 1
+  minutesToStarve: 6
+  weakBelow: 0.25
+  weakGrip: 0.35
+  Fullness:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
 --- !u!1 &8089381707692116750
 GameObject:
   m_ObjectHideFlags: 0

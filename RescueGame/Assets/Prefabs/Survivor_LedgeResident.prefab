@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 1644442725383369743}
   - component: {fileID: 8693157270713234988}
   - component: {fileID: 4539003195632295815}
+  - component: {fileID: 5983468256005219073}
   m_Layer: 8
   m_Name: Survivor_LedgeResident
   m_TagString: Untagged
@@ -560,6 +561,27 @@ MonoBehaviour:
   - key: typical
     clip: {fileID: 8300000, guid: d64e09e283bb44bff8a4d7fc3ca44910, type: 3}
   volume: 1
+--- !u!114 &5983468256005219073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 148015826837429340}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b261947879314634b9c464a67a53626, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CrewHunger
+  ShowTopMostFoldoutHeaderGroup: 1
+  minutesToStarve: 6
+  weakBelow: 0.25
+  weakGrip: 0.35
+  Fullness:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
 --- !u!1 &440887830128617170
 GameObject:
   m_ObjectHideFlags: 0

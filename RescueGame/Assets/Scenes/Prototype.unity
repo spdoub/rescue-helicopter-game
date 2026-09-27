@@ -815,6 +815,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!115 &173430053
+MonoScript:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  serializedVersion: 7
+  m_DefaultReferences: {}
+  m_Icon: {fileID: 0}
+  m_Type: 0
+  m_ExecutionOrder: 0
+  m_ClassName: PizzaBox
+  m_Namespace: 
+  m_AssemblyName: Assembly-CSharp
 --- !u!1 &181183722
 GameObject:
   m_ObjectHideFlags: 0
@@ -5473,6 +5488,7 @@ GameObject:
   - component: {fileID: 1229749800}
   - component: {fileID: 1229749801}
   - component: {fileID: 1229749802}
+  - component: {fileID: 1229749803}
   m_Layer: 0
   m_Name: Helicopter
   m_TagString: Untagged
@@ -6031,6 +6047,27 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: -100
+--- !u!114 &1229749803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 173430053}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PizzaBox
+  ShowTopMostFoldoutHeaderGroup: 1
+  paintMaterial: {fileID: 2100000, guid: cf7d466be64434120a4ee776e54eb71e, type: 2}
+  munch: {fileID: 8300000, guid: 5ea2bfd1344c6453a99b184ffc533b5e, type: 3}
+  slicesPerBox: 8
+  Slices:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 8
 --- !u!1 &1230215337
 GameObject:
   m_ObjectHideFlags: 0

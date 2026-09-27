@@ -199,6 +199,23 @@ public static class WinchBuilder
         RenderSettings.fogStartDistance = 80f; RenderSettings.fogEndDistance = 1300f;
         foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None)) { cam.farClipPlane = 3000f; EditorUtility.SetDirty(cam); }
 
+        // the crew's pizza: a box in the cabin, and hunger on every crew body (the prefab)
+        var pizza = heli.GetComponent<PizzaBox>(); if (!pizza) pizza = heli.AddComponent<PizzaBox>();
+        pizza.paintMaterial = painted; pizza.munch = C("munch");
+        EditorUtility.SetDirty(pizza);
+        var crewPrefabPath = "Assets/Prefabs/CrewPlayer.prefab";
+        var crewRoot = PrefabUtility.LoadPrefabContents(crewPrefabPath);
+        if (!crewRoot.GetComponent<CrewHunger>()) { crewRoot.AddComponent<CrewHunger>(); PrefabUtility.SaveAsPrefabAsset(crewRoot, crewPrefabPath); Debug.Log("[Audio] CrewHunger added to CrewPlayer prefab"); }
+        PrefabUtility.UnloadPrefabContents(crewRoot);
+        foreach (var sp in new[] { "Survivor_Grandma", "Survivor_ReclinerGuy", "Survivor_BackseatPilot", "Survivor_DogPerson", "Survivor_LedgeResident" })
+        {
+            string pp = "Assets/Prefabs/" + sp + ".prefab";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(pp) == null) continue;
+            var sr = PrefabUtility.LoadPrefabContents(pp);
+            if (!sr.GetComponent<CrewHunger>()) { sr.AddComponent<CrewHunger>(); PrefabUtility.SaveAsPrefabAsset(sr, pp); }
+            PrefabUtility.UnloadPrefabContents(sr);
+        }
+
         // the pilot's energy drink
         var buzz = heli.GetComponent<PilotBuzz>(); if (!buzz) buzz = heli.AddComponent<PilotBuzz>();
         buzz.gulp = C("gulp");

@@ -1773,6 +1773,7 @@ GameObject:
   - component: {fileID: 3168600660735015379}
   - component: {fileID: 3890586720773667058}
   - component: {fileID: 74089741688765160}
+  - component: {fileID: 7458910090530206000}
   m_Layer: 8
   m_Name: Survivor_BackseatPilot
   m_TagString: Untagged
@@ -2068,6 +2069,7 @@ MonoBehaviour:
   kind: 2
   displayName: Backseat Pilot
   chair: {fileID: 0}
+  dog: {fileID: 0}
   payBonus: 200
   hookNoticeRange: 4
   yankForce: 2600
@@ -2218,6 +2220,30 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  Fire:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+  Singed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  LedgeSpot:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: {x: 0, y: 0, z: 0, w: 0}
+  Agreed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  Place:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
 --- !u!114 &74089741688765160
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2304,6 +2330,27 @@ MonoBehaviour:
   - key: you_re_welcome
     clip: {fileID: 8300000, guid: 0434ac0006694474f9693d22aa363ff6, type: 3}
   volume: 1
+--- !u!114 &7458910090530206000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8829389338753943825}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b261947879314634b9c464a67a53626, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CrewHunger
+  ShowTopMostFoldoutHeaderGroup: 1
+  minutesToStarve: 6
+  weakBelow: 0.25
+  weakGrip: 0.35
+  Fullness:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
 --- !u!1 &8845376453885441991
 GameObject:
   m_ObjectHideFlags: 0
