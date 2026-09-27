@@ -27,6 +27,7 @@ SURVIVORS = {
             "I've had worse. I've had better. Three stars.", "My hip will never forgive you. Two stars.",
             "One star. I'm telling the newspaper.",
             "Is something burning? It's not my scones!", "Hot! Hot! Hurry up, sonny!", "I'm too old to be barbecued!", "OW! My cardigan's on fire!",
+            "Sand in my slippers. Marvellous.", "I only came up here for the view!", "Don't look down, Harold always said.", "The fish weren't biting anyway.", "I was picking mushrooms! Leave the basket!", "Eleven pounds for that cable car. Eleven!",
         ],
     },
     "recliner": {
@@ -58,6 +59,7 @@ SURVIVORS = {
             "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less.",
             "Hup! Textbook!", "Right. I'll be supervising.", "Adequate landing. Adequate.", "That was the winch's fault!",
             "Fire! Classic. You took too long.", "I'd have been here before the fire started!", "Downwind of the smoke, genius!", "My eyebrows! I'm billing you!",
+            "Beach landing. Rookie stuff. I'd have done it on the water.", "Mountain rescue! Density altitude! Do you even know what that is?", "Cliff winch. Textbook. Mine would've been faster.", "A lake. You know we could have just landed, right?", "Trees! Watch the rotor! WATCH THE ROTOR!", "I was fixing the cable car. I was nearly done.",
         ],
     },
     "dogperson": {
@@ -72,6 +74,7 @@ SURVIVORS = {
             "Coming, Biscuit!", "Biscuit! Oh, you brave boy!", "Come on Biscuit, walkies!", "Whoops! I'm okay!",
             "Biscuit! BISCUIT! Come here, boy!", "I'm not leaving without Biscuit!", "He likes things that hold still!", "Biscuit, no! Not the edge!",
             "Fire! Biscuit, stay away from the fire!", "Hurry! Biscuit hates fire!", "Stop, drop and roll, Biscuit!", "Ow ow ow! Hot hot hot!",
+            "Biscuit chased a crab all the way here!", "He saw a goat. He HAD to.", "Biscuit's scared of heights. So am I!", "He went in after a duck. Of course he did.", "Squirrels! It's always squirrels!", "Biscuit got in the gondola on his own. I just followed.",
         ],
     },
     "ledge": {

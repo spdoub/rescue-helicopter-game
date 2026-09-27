@@ -128,6 +128,7 @@ public class SurvivorBrain : NetworkBehaviour
         public string hup, settled, arrived, fell;
         public string[] fire; public string singed;
         public string[] refuse; public string agree; // Ledge Resident
+        public string[] placeLines; // what they say when hoisted from somewhere unusual (index = Place: beach, mountain, cliff, lake, forest, gondola)
         // Backseat Pilot: critiques that match what the helicopter is doing, and the takeover bit
         public string[] fast, bank, low, hover, takeover, givesUp, satisfied;
     }
@@ -142,6 +143,7 @@ public class SurvivorBrain : NetworkBehaviour
         reviews = new[] { "Lovely boys. Five stars. Would get winched again.", "Very nice. Bit bumpy. Four stars.", "I've had worse. I've had better. Three stars.", "My hip will never forgive you. Two stars.", "One star. I'm telling the newspaper." },
         hup = "HUP!", settled = "Right. Seatbelt. Where's the tea?", arrived = "Well! That was an experience.", fell = "OOF! Again, but better.",
         fire = new[] { "Is something burning? It's not my scones!", "Hot! Hot! Hurry up, sonny!", "I'm too old to be barbecued!" }, singed = "OW! My cardigan's on fire!",
+        placeLines = new[] { "Sand in my slippers. Marvellous.", "I only came up here for the view!", "Don't look down, Harold always said.", "The fish weren't biting anyway.", "I was picking mushrooms! Leave the basket!", "Eleven pounds for that cable car. Eleven!" },
     };
 
     static readonly Personality ReclinerLines = new()
@@ -173,6 +175,7 @@ public class SurvivorBrain : NetworkBehaviour
         reviews = new[] { "Five stars. I taught you well.", "Four stars. Almost as good as me.", "Three stars. Needed more of my input.", "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less." },
         hup = "Hup! Textbook!", settled = "Right. I'll be supervising.", arrived = "Adequate landing. Adequate.", fell = "That was the winch's fault!",
         fire = new[] { "Fire! Classic. You took too long.", "I'd have been here before the fire started!", "Downwind of the smoke, genius!" }, singed = "My eyebrows! I'm billing you!",
+        placeLines = new[] { "Beach landing. Rookie stuff. I'd have done it on the water.", "Mountain rescue! Density altitude! Do you even know what that is?", "Cliff winch. Textbook. Mine would've been faster.", "A lake. You know we could have just landed, right?", "Trees! Watch the rotor! WATCH THE ROTOR!", "I was fixing the cable car. I was nearly done." },
     };
 
     static readonly Personality DogLines = new()
@@ -185,6 +188,7 @@ public class SurvivorBrain : NetworkBehaviour
         reviews = new[] { "Five stars! Biscuit loved it!", "Four stars. He only threw up once.", "Three stars. Biscuit is unsettled.", "Two stars. Biscuit bit someone. I don't blame him.", "One star. Biscuit will remember this." },
         hup = "Coming, Biscuit!", settled = "Biscuit! Oh, you brave boy!", arrived = "Come on Biscuit, walkies!", fell = "Whoops! I'm okay!",
         fire = new[] { "Fire! Biscuit, stay away from the fire!", "Hurry! Biscuit hates fire!", "Stop, drop and roll, Biscuit!" }, singed = "Ow ow ow! Hot hot hot!",
+        placeLines = new[] { "Biscuit chased a crab all the way here!", "He saw a goat. He HAD to.", "Biscuit's scared of heights. So am I!", "He went in after a duck. Of course he did.", "Squirrels! It's always squirrels!", "Biscuit got in the gondola on his own. I just followed." },
     };
     static readonly string[] CallingDog = { "Biscuit! BISCUIT! Come here, boy!", "I'm not leaving without Biscuit!", "He likes things that hold still!", "Biscuit, no! Not the edge!" };
 
@@ -302,7 +306,7 @@ public class SurvivorBrain : NetworkBehaviour
                 {
                     Enter(State.Hooked);
                     if (RescueStartedAt < 0f) RescueStartedAt = Time.time;
-                    Say(Pick(L.hooked), 3f);
+                    Say(Place.Value >= 1 && L.placeLines != null && Place.Value - 1 < L.placeLines.Length ? L.placeLines[Place.Value - 1] : Pick(L.hooked), 3.5f);
                     nextYank = Time.time + yankEvery;
                 }
                 return;
