@@ -59,6 +59,7 @@ SURVIVORS = {
             "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less.",
             "Hup! Textbook!", "Right. I'll be supervising.", "Adequate landing. Adequate.", "That was the winch's fault!",
             "Fire! Classic. You took too long.", "I'd have been here before the fire started!", "Downwind of the smoke, genius!", "My eyebrows! I'm billing you!",
+            "WOOOO! Is this what you drink?!", "I CAN SEE THROUGH TIME!", "Faster! FASTER! Why is everything so SLOW?",
             "Beach landing. Rookie stuff. I'd have done it on the water.", "Mountain rescue! Density altitude! Do you even know what that is?", "Cliff winch. Textbook. Mine would've been faster.", "A lake. You know we could have just landed, right?", "Trees! Watch the rotor! WATCH THE ROTOR!", "I was fixing the cable car. I was nearly done.",
         ],
     },

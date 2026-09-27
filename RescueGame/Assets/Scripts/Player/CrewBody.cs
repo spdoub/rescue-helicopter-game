@@ -49,6 +49,8 @@ public class CrewBody : MonoBehaviour
     public float grabReach = 1.6f;
     public float grabSlack = 0.1f;
     public float grabBreakForce = 6000f;
+    /// <summary>Temporary multiplier on walk/sprint speed (the Backseat Pilot's energy-drink bit).</summary>
+    [System.NonSerialized] public float speedBoost = 1f;
     [Tooltip("How fast holding forward reels you in toward what you're holding (m/s).")]
     public float pullSpeed = 1.6f;
     public float minRope = 0.3f;
@@ -125,7 +127,7 @@ public class CrewBody : MonoBehaviour
 
         Vector3 wish = Quaternion.Euler(0f, input.yaw, 0f) * new Vector3(input.moveX, 0f, input.moveZ);
         if (wish.sqrMagnitude > 1f) wish.Normalize();
-        float speed = input.sprint && IsGrounded ? sprintSpeed : walkSpeed;
+        float speed = (input.sprint && IsGrounded ? sprintSpeed : walkSpeed) * speedBoost;
 
         Vector3 target = PlatformVelocity + wish * speed;
         Vector3 delta = target - rb.linearVelocity;

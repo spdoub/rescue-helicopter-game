@@ -81,6 +81,9 @@ public class PilotBuzz : NetworkBehaviour
         GulpRpc();
     }
 
+    /// <summary>Host: a survivor drank it (empties the can for the pilot).</summary>
+    public void StolenByNpc() { if (!IsServer) return; level = 0f; Caffeine.Value = 0f; GulpRpc(); }
+
     [Rpc(SendTo.Everyone)]
     void GulpRpc() { if (gulp) AudioSource.PlayClipAtPoint(gulp, CanPosition, 0.9f); }
 

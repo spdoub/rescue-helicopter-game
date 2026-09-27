@@ -190,7 +190,7 @@ public class NetworkPlayer : NetworkBehaviour
     {
         if (!IsSpawned) return;
 
-        if (IsServer && IsNpc) ReceiveInput(brain.Think());
+        if (IsServer && IsNpc) { ReceiveInput(brain.Think()); body.speedBoost = brain.SpeedBoost; }
         else if (IsOwner)
         {
             var input = ReadInput();

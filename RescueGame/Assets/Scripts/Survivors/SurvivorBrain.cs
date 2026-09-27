@@ -128,6 +128,7 @@ public class SurvivorBrain : NetworkBehaviour
         public string hup, settled, arrived, fell;
         public string[] fire; public string singed;
         public string[] refuse; public string agree; // Ledge Resident
+        public string[] supersonic; // Backseat Pilot after stealing the energy drink
         public string[] placeLines; // what they say when hoisted from somewhere unusual (index = Place: beach, mountain, cliff, lake, forest, gondola)
         // Backseat Pilot: critiques that match what the helicopter is doing, and the takeover bit
         public string[] fast, bank, low, hover, takeover, givesUp, satisfied;
@@ -170,6 +171,7 @@ public class SurvivorBrain : NetworkBehaviour
         low = new[] { "Pull up! PULL UP!", "You're scraping the rooftops!" },
         hover = new[] { "You call that a hover?", "Steady! Steady! Steady!" },
         takeover = new[] { "Move over, let me show you how it's done!", "My aircraft!", "I've got it, I've got it!" },
+        supersonic = new[] { "WOOOO! Is this what you drink?!", "I CAN SEE THROUGH TIME!", "Faster! FASTER! Why is everything so SLOW?" },
         givesUp = new[] { "Fine! FINE. Your funeral.", "Unhand me! I'm a professional!" },
         satisfied = new[] { "See? That's how it's done.", "You're welcome." },
         reviews = new[] { "Five stars. I taught you well.", "Four stars. Almost as good as me.", "Three stars. Needed more of my input.", "Two stars. I'm reporting this to someone important.", "One star. I'd have crashed less." },
@@ -500,6 +502,15 @@ public class SurvivorBrain : NetworkBehaviour
             else
             {
                 if (arrivedAt <= 0f) arrivedAt = t;
+                // The can! He grabs the pilot's energy drink, downs it, and goes supersonic.
+                var buzz = PilotBuzz.Instance;
+                if (buzz != null && buzz.IsSpawned && supersonicUntil < Time.time - 40f && Vector3.Distance(body.Chest, buzz.CanPosition) < 1.4f && buzz.Caffeine.Value > 0.3f)
+                {
+                    buzz.StolenByNpc();
+                    supersonicUntil = Time.time + 15f;
+                    Say(Pick(L.supersonic), 3f);
+                    RoughMoments++;
+                }
                 input.grabLeft = input.grabRight = false;
                 input.pitch = 35f; // reaching for the stick
                 if (Time.time > nextMeddle)
@@ -526,7 +537,9 @@ public class SurvivorBrain : NetworkBehaviour
         nextTakeover = Time.time + Random.Range(30f, 50f);
         Enter(State.Seated);
     }
-    float arrivedAt, nextMeddle, returningSince;
+    float arrivedAt, nextMeddle, returningSince, supersonicUntil = -100f;
+    /// <summary>Walk speed multiplier right now (the Backseat Pilot on the pilot's energy drink).</summary>
+    public float SpeedBoost => Time.time < supersonicUntil ? 2.6f : 1f;
 
     // ------------------------------------------------------------------ Recliner Guy
 
