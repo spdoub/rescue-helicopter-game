@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -155,6 +156,36 @@ public class RescueHud : MonoBehaviour
             }
             Outlined(new Rect(26, y, 900, 30), "- " + goal, objective);
             y += 28f;
+        }
+        // The pilot can't see the hook: a readout of where it hangs relative to the nearest waiting survivor
+        // (helicopter-relative, so "left/right/ahead/back" mean what the pilot sees). Crew get the same line
+        // so they can call it out over voice: that's the whole game.
+        var me = NetworkPlayer.Local;
+        var winchC = heli ? heli.GetComponent<NetworkWinch>() : null;
+        if (me != null && winchC != null && winchC.IsSpawned && winchC.Length.Value > 1.5f)
+        {
+            SurvivorBrain target = null; float bestD = 40f;
+            foreach (var s in all)
+            {
+                if (!s.IsSpawned || (s.Current != SurvivorBrain.State.Waiting && s.Current != SurvivorBrain.State.Hooked)) continue;
+                Vector3 goal = s.chair != null ? s.chair.liftPoint.position : s.transform.position;
+                float d = Vector3.Distance(winchC.HookEyePosition, goal);
+                if (d < bestD) { bestD = d; target = s; }
+            }
+            if (target != null && target.Current == SurvivorBrain.State.Waiting)
+            {
+                Vector3 goal = target.chair != null ? target.chair.liftPoint.position : target.transform.position + Vector3.up * 0.9f;
+                Vector3 off = heli.transform.InverseTransformDirection(goal - winchC.HookEyePosition);
+                string side = Mathf.Abs(off.x) < 0.7f ? "" : off.x > 0f ? $"{Mathf.Abs(off.x):0.#} m right" : $"{Mathf.Abs(off.x):0.#} m left";
+                string fore = Mathf.Abs(off.z) < 0.7f ? "" : off.z > 0f ? $"{Mathf.Abs(off.z):0.#} m ahead" : $"{Mathf.Abs(off.z):0.#} m back";
+                string down = off.y < -0.6f ? $"{-off.y:0.#} m too low" : off.y > 0.6f ? $"{off.y:0.#} m to go down" : "at their height";
+                string call = string.Join(", ", new[] { side, fore, down }.Where(x => x.Length > 0));
+                bool close = Mathf.Abs(off.x) < 0.7f && Mathf.Abs(off.z) < 0.7f && Mathf.Abs(off.y) < 0.8f;
+                objective.normal.textColor = close ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.9f, 0.6f);
+                Outlined(new Rect(26, y, 900, 30), $"HOOK -> {target.displayName}: {(close ? "RIGHT THERE, hold it!" : call)}", objective);
+                objective.normal.textColor = Color.white;
+                y += 28f;
+            }
         }
         if (anyoneAboard && RescueZone.All.Count > 0 && cam != null)
         {
