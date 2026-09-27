@@ -26,7 +26,7 @@ public class IslandMap : MonoBehaviour
         tex = Paint(isl);
         // dash, co-pilot side (leaning back with the panel), and the left cabin bulkhead
         Place("MapDash", new Vector3(-0.62f, 1.50f, 2.60f), Quaternion.Euler(18f, 0f, 0f), 0.26f);   // on the panel, leaning back, facing the seats
-        Place("MapWall", new Vector3(-0.65f, 1.95f, 1.42f), Quaternion.Euler(0f, 0f, 0f), 0.42f);     // on the bulkhead's cabin face
+        Place("MapWall", new Vector3(0.62f, 2.42f, 1.42f), Quaternion.Euler(0f, 0f, 0f), 0.34f);      // right bulkhead, above the headset hooks (the left one has the first-aid kit)
     }
 
     void Place(string name, Vector3 local, Quaternion rot, float width)

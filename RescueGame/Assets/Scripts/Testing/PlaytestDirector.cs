@@ -249,7 +249,9 @@ public class PlaytestDirector : MonoBehaviour
             {
                 case SurvivorBrain.State.Waiting:
                     hookedAt = -1f;
-                    dir = w.HookEyePosition.y > lowerTo(g) ? (sbyte)-1 : (sbyte)0;
+                    // lower until it's at the right height; if it has dropped well past (swung below a ledge), take some back up
+                    float dy = w.HookEyePosition.y - lowerTo(g);
+                    dir = dy > 0.2f ? (sbyte)-1 : dy < -1.0f ? (sbyte)1 : (sbyte)0;
                     break;
                 case SurvivorBrain.State.Hooked:
                     if (hookedAt < 0f) hookedAt = e;
@@ -653,7 +655,8 @@ public class PlaytestDirector : MonoBehaviour
         trackKind = kind; // telemetry follows the survivor being rescued
         NetworkWinch W(PlaytestDirector d) => d.Heli.GetComponent<NetworkWinch>();
         SurvivorBrain G() => SurvivorBrain.Find(kind);
-        float LowerTo(SurvivorBrain g) => g.chair != null ? g.chair.liftPoint.position.y + 0.4f : g.transform.position.y + 0.6f;
+        // (where the hook's eye should hang: the chair's strap, or roughly chest height; a ledge has no floor below to land it on)
+        float LowerTo(SurvivorBrain g) => g.chair != null ? g.chair.liftPoint.position.y + 0.4f : g.transform.position.y + (g.kind == SurvivorBrain.Kind.LedgeResident ? 0.9f : 0.6f);
         Add(new GoTo("walk to door", door, 0.6f));
         Add(new GoTo("climb in", cabin, 0.35f, 8f));
         Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));

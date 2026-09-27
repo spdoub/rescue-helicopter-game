@@ -50,7 +50,7 @@ SHOTS = {
     "cockpit_collective": ["-takepilot", "-pilotbot", "tour", "-shotview", "fp", "-shotpitch", "55", "-shotyaw", "-50", "-shotdelay", "8"],
     "dispatch_welcome": ["-shotview", "fp", "-shotpitch", "6", "-shotdelay", "6"],
     "cockpit_map": ["-shotat", "-0.35,1.85,1.9,-15,18,60", "-shotdelay", "7"],
-    "cabin_map": ["-shotat", "-0.2,1.9,0.55,-25,2,55", "-shotdelay", "7"],
+    "cabin_map": ["-shotat", "0.2,1.9,0.55,25,2,55", "-shotdelay", "7"],
     "cockpit_left": ["-takepilot", "-shotview", "fp", "-shotpitch", "12", "-shotyaw", "-50", "-shotdelay", "7"],
     "island_overview": ["-shotat", "0,420,-1100,0,22,60", "-shotdelay", "8"],
     "island_north": ["-shotat", "0,380,1150,180,20,60", "-shotdelay", "8"],
