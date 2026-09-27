@@ -42,11 +42,20 @@ public class Weather : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         if (IsServer) { heading = Random.Range(0f, 360f); Current.Value = Kind.Breezy; }
+        // Dev builds: "-weather calm|breezy|gusty" pins the weather (screenshots, tests)
+        if (IsServer && Debug.isDebugBuild)
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            int at = System.Array.IndexOf(args, "-weather");
+            if (at >= 0 && at + 1 < args.Length && System.Enum.TryParse(args[at + 1], true, out Kind k)) { Current.Value = k; pinned = true; }
+        }
     }
 
     /// <summary>Host: new weather for a new call.</summary>
+    bool pinned;
     public void Roll()
     {
+        if (pinned) { heading = Random.Range(0f, 360f); return; }
         float r = Random.value;
         Current.Value = r < 0.5f ? Kind.Calm : r < 0.85f ? Kind.Breezy : Kind.Gusty;
         heading = Random.Range(0f, 360f);

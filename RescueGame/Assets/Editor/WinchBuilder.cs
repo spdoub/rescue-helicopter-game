@@ -199,6 +199,11 @@ public static class WinchBuilder
         RenderSettings.fogStartDistance = 80f; RenderSettings.fogEndDistance = 1300f;
         foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None)) { cam.farClipPlane = 3000f; EditorUtility.SetDirty(cam); }
 
+        // rain (gusty weather): windscreen drops + wiper + a rain sheet
+        var rain = heli.GetComponent<Rain>(); if (!rain) rain = heli.AddComponent<Rain>();
+        rain.dropMaterial = smoke; rain.streakMaterial = smoke;
+        EditorUtility.SetDirty(rain);
+
         // bird strikes on the windscreen
         var ws = heli.GetComponent<WindscreenSplat>(); if (!ws) ws = heli.AddComponent<WindscreenSplat>();
         ws.splatMaterial = smoke; ws.splatSound = C("bird_splat");

@@ -2211,7 +2211,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
       propertyPath: lines.Array.size
-      value: 40
+      value: 46
       objectReference: {fileID: 0}
     - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
       propertyPath: lines.Array.data[36].key
@@ -2230,6 +2230,30 @@ PrefabInstance:
       value: my_eyebrows_i_m_billing_you
       objectReference: {fileID: 0}
     - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[40].key
+      value: a_lake_you_know_we_could_have_just_landed_right
+      objectReference: {fileID: 0}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[41].key
+      value: beach_landing_rookie_stuff_i_d_have_done_it_on_t
+      objectReference: {fileID: 0}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[42].key
+      value: cliff_winch_textbook_mine_would_ve_been_faster
+      objectReference: {fileID: 0}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[43].key
+      value: i_was_fixing_the_cable_car_i_was_nearly_done
+      objectReference: {fileID: 0}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[44].key
+      value: mountain_rescue_density_altitude_do_you_even_kno
+      objectReference: {fileID: 0}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[45].key
+      value: trees_watch_the_rotor_watch_the_rotor
+      objectReference: {fileID: 0}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
       propertyPath: lines.Array.data[36].clip
       value: 
       objectReference: {fileID: 8300000, guid: 58cedf70a7238472ab6fd5e3a76afe11, type: 3}
@@ -2245,6 +2269,30 @@ PrefabInstance:
       propertyPath: lines.Array.data[39].clip
       value: 
       objectReference: {fileID: 8300000, guid: a422bb18e5c504d3686c3d4a308f5b86, type: 3}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[40].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: eb381e6eb55694f899fee035066abc26, type: 3}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[41].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 8108f1fd1d7d845bd9999205016c2603, type: 3}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[42].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 30f3fa92f82614503bf2aa6e604608f5, type: 3}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[43].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 8384c972a634a42289518050ecd2c188, type: 3}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[44].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 6944678dfcc754cf8b81f1492b7bd9ff, type: 3}
+    - target: {fileID: 74089741688765160, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
+      propertyPath: lines.Array.data[45].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 61ee542fa15fb418fbfeecf5ca866e90, type: 3}
     - target: {fileID: 2112233910344528246, guid: efc0ab426dc954e699b21bfbb24afa2c, type: 3}
       propertyPath: m_InScenePlaced
       value: 1
@@ -2832,7 +2880,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
       propertyPath: lines.Array.size
-      value: 28
+      value: 34
       objectReference: {fileID: 0}
     - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
       propertyPath: lines.Array.data[24].key
@@ -2851,6 +2899,30 @@ PrefabInstance:
       value: stop_drop_and_roll_biscuit
       objectReference: {fileID: 0}
     - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[28].key
+      value: biscuit_chased_a_crab_all_the_way_here
+      objectReference: {fileID: 0}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[29].key
+      value: biscuit_got_in_the_gondola_on_his_own_i_just_fol
+      objectReference: {fileID: 0}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[30].key
+      value: biscuit_s_scared_of_heights_so_am_i
+      objectReference: {fileID: 0}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[31].key
+      value: he_saw_a_goat_he_had_to
+      objectReference: {fileID: 0}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[32].key
+      value: he_went_in_after_a_duck_of_course_he_did
+      objectReference: {fileID: 0}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[33].key
+      value: squirrels_it_s_always_squirrels
+      objectReference: {fileID: 0}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
       propertyPath: lines.Array.data[24].clip
       value: 
       objectReference: {fileID: 8300000, guid: 172bbf3687fc5468a91b5d427cb128b3, type: 3}
@@ -2866,6 +2938,30 @@ PrefabInstance:
       propertyPath: lines.Array.data[27].clip
       value: 
       objectReference: {fileID: 8300000, guid: ee151d936bba04436993d6b5f6bbb93a, type: 3}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[28].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: a11f927e019ee4655b2f3926d403e447, type: 3}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[29].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 41a54868ac48f4dc5aed6d86f2981dbe, type: 3}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[30].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 39e91e2bdf8e24498934041e49076763, type: 3}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[31].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 56686417128324ed3907000b692da287, type: 3}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[32].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 58c990371da29428188daf791c7a6eb7, type: 3}
+    - target: {fileID: 7554391755996603687, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
+      propertyPath: lines.Array.data[33].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: d74206e1681234635af31f83770ed3f6, type: 3}
     - target: {fileID: 8099547750200862807, guid: 0ba09e0d27b3a45f498185d8ec0fc0ef, type: 3}
       propertyPath: dog
       value: 
@@ -3355,7 +3451,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
       propertyPath: lines.Array.size
-      value: 28
+      value: 34
       objectReference: {fileID: 0}
     - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
       propertyPath: lines.Array.data[24].key
@@ -3374,6 +3470,30 @@ PrefabInstance:
       value: ow_my_cardigan_s_on_fire
       objectReference: {fileID: 0}
     - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[28].key
+      value: don_t_look_down_harold_always_said
+      objectReference: {fileID: 0}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[29].key
+      value: eleven_pounds_for_that_cable_car_eleven
+      objectReference: {fileID: 0}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[30].key
+      value: i_only_came_up_here_for_the_view
+      objectReference: {fileID: 0}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[31].key
+      value: i_was_picking_mushrooms_leave_the_basket
+      objectReference: {fileID: 0}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[32].key
+      value: sand_in_my_slippers_marvellous
+      objectReference: {fileID: 0}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[33].key
+      value: the_fish_weren_t_biting_anyway
+      objectReference: {fileID: 0}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
       propertyPath: lines.Array.data[24].clip
       value: 
       objectReference: {fileID: 8300000, guid: 1f4ea72c79ff44032b11912e7cc70ff9, type: 3}
@@ -3389,6 +3509,30 @@ PrefabInstance:
       propertyPath: lines.Array.data[27].clip
       value: 
       objectReference: {fileID: 8300000, guid: 744b334aebd7f49ee84ee1b7d311fa5d, type: 3}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[28].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 9db6da411034d4f20a53753ab38dab1e, type: 3}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[29].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 0efa0a855900e45a2a75494424cde686, type: 3}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[30].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 3d27091e710204b3fbda509b3d3ee89a, type: 3}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[31].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 87b1795f0730c45b5b1b4e0e96f9f41e, type: 3}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[32].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 969d8d840f1f94ba5bb0a8baa8867b1c, type: 3}
+    - target: {fileID: 1907543349629772805, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
+      propertyPath: lines.Array.data[33].clip
+      value: 
+      objectReference: {fileID: 8300000, guid: 429b2c30443544fc88fbd9a74d9ad40a, type: 3}
     - target: {fileID: 3023426350825270261, guid: bc126fe73cde040ef89fd26498f0839f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 13.952295
@@ -5327,6 +5471,7 @@ GameObject:
   - component: {fileID: 1229749798}
   - component: {fileID: 1229749799}
   - component: {fileID: 1229749800}
+  - component: {fileID: 1229749801}
   m_Layer: 0
   m_Name: Helicopter
   m_TagString: Untagged
@@ -5840,6 +5985,22 @@ MonoBehaviour:
   splatSound: {fileID: 8300000, guid: acc9f3a0867ec4dd8a5ae79d04ab3cd7, type: 3}
   maxSplats: 4
   fadeSeconds: 45
+--- !u!114 &1229749801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f695a56ab3eed42adba97c1983578795, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Rain
+  dropMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
+  streakMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
+  dropsPerSecond: 6
+  maxDrops: 60
 --- !u!1 &1230215337
 GameObject:
   m_ObjectHideFlags: 0
