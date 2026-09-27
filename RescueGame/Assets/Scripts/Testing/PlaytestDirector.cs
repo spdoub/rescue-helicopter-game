@@ -495,6 +495,30 @@ public class PlaytestDirector : MonoBehaviour
                 break;
             }
 
+            case "drink": // sit in the pilot seat, look at the can on the dash, F: caffeine refills and the jitters start
+            {
+                Add(new GoTo("walk to door", door, 0.6f));
+                Add(new GoTo("climb in", cabin, 0.35f, 8f));
+                Add(new Until("inside cabin", d => d.Me.OnHelicopter.Value, 3f));
+                Add(new GoTo("to the pilot seat", d => d.Heli.transform.TransformPoint(new Vector3(0.45f, 1f, 1.5f)), 0.35f, 8f));
+                Add(new Seat());
+                Add(new Until("flying seat taken", d => d.Me.SeatedAsPilot.Value, 3f));
+                Add(new Lambda("drain the can (test)", d => { var b = PilotBuzz.Instance; if (b && NetworkManager.Singleton.IsServer) b.Caffeine.Value = 0.1f; }));
+                Add(new Lambda("look at the can", d =>
+                {
+                    Vector3 to = PilotBuzz.Instance.CanPosition - Camera.main.transform.position; Vector3 flat = new Vector3(to.x, 0f, to.z);
+                    // (look angles are helicopter-relative while seated: subtract the heli's yaw)
+                    d.Me.BotLook(Quaternion.LookRotation(flat).eulerAngles.y - d.Heli.transform.eulerAngles.y, -Mathf.Atan2(to.y, flat.magnitude) * Mathf.Rad2Deg);
+                }));
+                Add(new Act("settle", 0.8f));
+                Add(new Until("aiming at the can", d => PilotBuzz.Instance.Aimed(Camera.main), 3f));
+                Add(new Lambda("press F", d => d.Me.Use()));
+                Add(new Until("caffeine refilled + jittery", d => PilotBuzz.Instance.Caffeine.Value > 0.95f && PilotBuzz.Instance.Jittery, 3f));
+                Add(new Act("ride out the jitters", 7f));
+                Add(new Until("steady again", d => !PilotBuzz.Instance.Jittery, 2f));
+                break;
+            }
+
             case "rescue_crew": // winch operator for a full rescue (someone else flies with the "rescue" pilot bot)
                 RescueRounds(SurvivorBrain.Kind.StrongGrandma, 2, door, cabin);
                 break;

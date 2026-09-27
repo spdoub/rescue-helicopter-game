@@ -386,7 +386,9 @@ public class NetworkPlayer : NetworkBehaviour
     public void Use()
     {
         int card = UpgradeBoard.Instance ? UpgradeBoard.Instance.Aimed(Camera.main) : -1;
-        if (card >= 0) BuyUpgradeRpc((byte)card); else TryToggleNearestDoor();
+        if (card >= 0) { BuyUpgradeRpc((byte)card); return; }
+        if (PilotBuzz.Instance && PilotBuzz.Instance.Aimed(Camera.main)) { PilotBuzz.Instance.DrinkRpc(); return; }
+        TryToggleNearestDoor();
     }
 
     [Rpc(SendTo.Server)]

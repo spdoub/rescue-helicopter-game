@@ -98,6 +98,13 @@ public class RescueHud : MonoBehaviour
             objective.normal.textColor = Color.white;
             y += 30f;
         }
+        var buzz = PilotBuzz.Instance;
+        if (buzz != null && buzz.IsSpawned && (buzz.Low || buzz.Jittery))
+        {
+            fuelStyle.normal.textColor = buzz.Jittery ? new Color(1f, 0.9f, 0.3f) : (Mathf.Repeat(Time.time, 1f) < 0.5f ? new Color(1f, 0.55f, 0.3f) : Color.white);
+            Outlined(new Rect(26, y - 2, 900, 32), buzz.Jittery ? "PILOT: WIRED!  (hands shaking)" : "PILOT: FLAGGING - controls sluggish. Drink the can on the dash (look at it, F)", fuelStyle);
+            y += 30f;
+        }
         if (damage != null && damage.IsSpawned && damage.Health.Value < 0.999f)
         {
             float h = damage.Health.Value;
@@ -266,6 +273,7 @@ public class RescueHud : MonoBehaviour
         if (me == null || !me.IsSpawned) return;
         if (UpgradeBoard.Instance && UpgradeBoard.Instance.Aimed(Camera.main) >= 0) return; // the board has its own
         var lines = new System.Collections.Generic.List<(string key, string what)>();
+        if (PilotBuzz.Instance && PilotBuzz.Instance.Aimed(Camera.main)) lines.Add(("F", PilotBuzz.Instance.Low ? "Drink the energy drink (you need it)" : "Drink the energy drink"));
         if (me.SeatedAsPilot.Value) lines.Add(("E", "Leave the controls"));
         else if (me.SeatedPassenger.Value) lines.Add(("E", "Stand up"));
         else

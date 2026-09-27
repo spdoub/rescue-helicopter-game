@@ -24,6 +24,7 @@ SFX = {
     "city_ambience": ("Distant city street ambience on a warm evening, light traffic hum, a far-away car horn, a faint siren far off, a few pigeons, steady and calm", 12.0, True),
     "car_horn": ("Single short car horn honk from a small car, city street, close", 0.8, False),
     "bird_splat": ("A bird hitting a helicopter windscreen: wet thump, a squawk cut short, feathers, close and sudden", 0.9, False),
+    "gulp": ("Cartoon big gulp of a fizzy energy drink from a can, glug glug, then a satisfied ahh and a tiny burp", 1.6, False),
     "delivered_jingle": ("Short cheerful cartoon success jingle, bouncy brass and xylophone, cash register ding at the end", 2.5, False),
 }
 

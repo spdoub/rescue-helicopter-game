@@ -132,6 +132,7 @@ public class NetworkHelicopter : NetworkBehaviour
                 applied.roll = Mathf.Clamp(applied.roll + Meddle.roll, -1f, 1f);
                 applied.yaw = Mathf.Clamp(applied.yaw + Meddle.yaw, -1f, 1f);
             }
+            var buzz = GetComponent<PilotBuzz>(); if (buzz) applied = buzz.Apply(applied);
             controller.SetInput(applied);
             controller.hoverAutopilot = PilotClientId.Value == NoPilot && Time.time >= meddleUntil;
             var c = new Vector4(applied.collective, applied.pitch, applied.roll, applied.yaw);

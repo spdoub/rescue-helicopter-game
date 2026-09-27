@@ -5472,6 +5472,7 @@ GameObject:
   - component: {fileID: 1229749799}
   - component: {fileID: 1229749800}
   - component: {fileID: 1229749801}
+  - component: {fileID: 1229749802}
   m_Layer: 0
   m_Name: Helicopter
   m_TagString: Untagged
@@ -6001,6 +6002,35 @@ MonoBehaviour:
   streakMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
   dropsPerSecond: 6
   maxDrops: 60
+--- !u!114 &1229749802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229749784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 844da0907b54445f2ace4f3d8cb1ba9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PilotBuzz
+  ShowTopMostFoldoutHeaderGroup: 1
+  minutesPerCan: 4.5
+  lowBelow: 0.25
+  sluggish: 0.62
+  jitterSeconds: 6
+  jitterAmount: 0.35
+  gulp: {fileID: 8300000, guid: d7b3869b662a04c289e3b75f2d1b21d8, type: 3}
+  Caffeine:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
+  JitterUntil:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: -100
 --- !u!1 &1230215337
 GameObject:
   m_ObjectHideFlags: 0
