@@ -232,7 +232,7 @@ public class PlaytestDirector : MonoBehaviour
     class HookAndReel : Step
     {
         readonly Func<PlaytestDirector, SurvivorBrain> who; readonly Func<SurvivorBrain, float> lowerTo;
-        float hookedAt = -1f, lastLog;
+        float hookedAt = -1f, lastLog, lastHookY = float.NaN, stallSince = -1f, unsnagUntil = -1f;
         public HookAndReel(Func<PlaytestDirector, SurvivorBrain> who, Func<SurvivorBrain, float> lowerTo, float timeout) { this.who = who; this.lowerTo = lowerTo; this.timeout = timeout; }
         public override string Name => "hook and reel";
         public override bool Tick(PlaytestDirector d, float e)
@@ -252,6 +252,13 @@ public class PlaytestDirector : MonoBehaviour
                     // lower until it's at the right height; if it has dropped well past (swung below a ledge), take some back up
                     float dy = w.HookEyePosition.y - lowerTo(g);
                     dir = dy > 0.2f ? (sbyte)-1 : dy < -1.0f ? (sbyte)1 : (sbyte)0;
+                    // snagged? (paying out but the hook isn't getting any lower): reel in for a couple of seconds to free it, then try again
+                    if (e < unsnagUntil) { dir = 1; break; }
+                    float hy = w.HookEyePosition.y;
+                    if (dir == -1 && !float.IsNaN(lastHookY) && hy > lastHookY - 0.05f) { if (stallSince < 0f) stallSince = e; }
+                    else stallSince = -1f;
+                    if (stallSince >= 0f && e - stallSince > 3f) { unsnagUntil = e + 2.5f; stallSince = -1f; Debug.Log("[Playtest] hook and reel: hook snagged, reeling in to free it"); }
+                    lastHookY = hy;
                     break;
                 case SurvivorBrain.State.Hooked:
                     if (hookedAt < 0f) hookedAt = e;

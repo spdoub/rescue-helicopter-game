@@ -887,6 +887,9 @@ public class SurvivorBrain : NetworkBehaviour
             if (Physics.CheckBox(s + n * 2.5f + Vector3.up * 9f, new Vector3(6.5f, 3f, 6.5f), Quaternion.LookRotation(n), mask, QueryTriggerInteraction.Ignore)) continue;
             if (Physics.Raycast(s + Vector3.up * 0.3f, Vector3.up, 9f, mask, QueryTriggerInteraction.Ignore)) continue;
             if (Physics.Raycast(s + n * 1.5f + Vector3.up * 0.3f, Vector3.up, 12f, mask, QueryTriggerInteraction.Ignore)) continue;   // nothing overhanging where the cable will hang
+            // ...and a clean drop below it, so a hook that swings low doesn't wedge on a sill or a lower roof
+            if (Physics.Raycast(s + n * 1.2f + Vector3.up * 0.3f, Vector3.down, 8f, mask, QueryTriggerInteraction.Ignore)) continue;
+            if (Physics.Raycast(s + n * 2.5f + Vector3.up * 0.3f, Vector3.down, 8f, mask, QueryTriggerInteraction.Ignore)) continue;
             if (Physics.CheckBox(s + Vector3.up * 1.1f + n * 0.1f, new Vector3(1.6f, 0.9f, 0.35f), Quaternion.LookRotation(n), mask, QueryTriggerInteraction.Ignore)) continue;
             // a sheer drop all round (not a hop onto the neighbour's roof)
             bool sheer = true;
