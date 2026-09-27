@@ -741,8 +741,11 @@ public class SurvivorBrain : NetworkBehaviour
             if (c.isTrigger || c.attachedRigidbody != null) continue;
             var b = c.bounds;
             if (b.max.y < 6f || b.max.y > 26f || b.size.x < 9f || b.size.z < 9f) continue;
+            // 50-150 m from where she is, unless she's been dropped somewhere with no roofs nearby (the cliff
+            // station): then any roof in town will do, the helicopter has to fly back anyway
             float d = Vector2.Distance(new Vector2(b.center.x, b.center.z), new Vector2(transform.position.x, transform.position.z));
-            if (d < 50f || d > 150f) continue;
+            bool farFromTown = new Vector2(transform.position.x, transform.position.z).magnitude > 260f;
+            if (!farFromTown && (d < 50f || d > 150f)) continue;
             bool nearDropOff = false;
             foreach (var z in RescueZone.All) if (Vector3.Distance(z.transform.position, b.center) < 30f) nearDropOff = true;
             if (nearDropOff) continue;
