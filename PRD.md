@@ -162,10 +162,15 @@ Survivors pay on drop-off. Payout scales with who was saved, speed, and how roug
 ## Build plan
 
 1. **Prototype.** Grey-box helicopter, one pilot, one crew member, online. Flying, grabbing, winch, one survivor.
+   *Done (2026-09-25).*
 2. **Vertical slice.** Mountains campaign, one helicopter, 3–4 mission types, 3 survivors, radio filter, first art pass.
+   *Largely done (2026-09-26), on the Big City island instead of Mountains: hand-built medevac helicopter, 5 survivors (Strong Grandma, Recliner Guy, Backseat Pilot, Dog Person + Biscuit, Ledge Resident), rescues on rooftops, the beach, mountains, cliff top, lake, forest and a stuck gondola; pressures: fuel, wind and rain, rooftop fires, hull damage; radio dispatcher with the aviation filter; survivor voices; living city; two drop-off pads. Still to do from this stage: the Mountains base itself, more mission types (water rescue, fire drop, night).*
 3. **Core systems.** Job board, payouts, upgrades, hangar, host save, 2–4 player scaling, helicopter choice.
+   *Started: payouts and reviews, the upgrade board (winch, tanks, armour, stabiliser), consumables (energy drink, pizza), a review wall. Not yet: job board, hangar, host save, helicopter choice.*
 4. **Content.** Remaining campaigns, finales, full survivor cast, endless mode, cosmetics, trophy wall.
+   *Started: per-player suit colours; the review wall is the trophy wall's first slice.*
 5. **Steam launch prep.** Store page, trailer, playtest, Early Access or full release.
+   *Not started. Automated playtest suite exists (tools/playtest.py).*
 
 ## Open questions
 - [ ] Final game name
