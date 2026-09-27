@@ -236,6 +236,14 @@ public static class WinchBuilder
         map.paperMaterial = painted; map.pinMaterial = painted;
         EditorUtility.SetDirty(map);
 
+        // the review wall next to the upgrade board (faces the pad like the board does)
+        var rwGo = GameObject.Find("ReviewWall") ?? new GameObject("ReviewWall");
+        Vector3 rwPos = new Vector3(-9f, 0.1f, 8.5f);
+        rwGo.transform.SetPositionAndRotation(rwPos, Quaternion.LookRotation(new Vector3(rwPos.x, 0f, rwPos.z)));
+        var rw = rwGo.GetComponent<ReviewWall>(); if (!rw) rw = rwGo.AddComponent<ReviewWall>();
+        rw.material = painted;
+        EditorUtility.SetDirty(rw);
+
         // the dispatcher on the radio
         var dispGo = GameObject.Find("Dispatch") ?? new GameObject("Dispatch");
         var disp = dispGo.GetComponent<Dispatcher>(); if (!disp) disp = dispGo.AddComponent<Dispatcher>();

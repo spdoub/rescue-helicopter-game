@@ -49,6 +49,7 @@ SHOTS = {
     "cockpit_flying_down": ["-takepilot", "-pilotbot", "tour", "-shotview", "fp", "-shotpitch", "40", "-shotyaw", "0", "-shotdelay", "9"],
     "cockpit_collective": ["-takepilot", "-pilotbot", "tour", "-shotview", "fp", "-shotpitch", "55", "-shotyaw", "-50", "-shotdelay", "8"],
     "dispatch_welcome": ["-shotview", "fp", "-shotpitch", "6", "-shotdelay", "6"],
+    "review_wall": ["-shotat", "-4.5,1.7,6.0,-70,4,60", "-shotdelay", "7"],
     "cabin_pizza": ["-shotat", "0.1,1.6,0.6,-110,30,60", "-shotdelay", "7"],
     "cockpit_rain": ["-takepilot", "-weather", "gusty", "-shotview", "fp", "-shotpitch", "6", "-shotyaw", "0", "-shotdelay", "14"],
     "heli_rain": ["-shotat", "7,2.6,8,220,10,50", "-weather", "gusty", "-shotdelay", "10"],
