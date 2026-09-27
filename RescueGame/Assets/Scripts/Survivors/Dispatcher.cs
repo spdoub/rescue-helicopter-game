@@ -42,15 +42,17 @@ public class Dispatcher : MonoBehaviour
                 Say(s.kind == SurvivorBrain.Kind.LedgeResident ? "call_ledge" : "call_" + PlaceKey(s.Place.Value));
             lastState[s] = now;
         }
-        foreach (var z in RescueZone.All)
+        var bank = RescueZone.Bank;
+        if (bank != null && bank.IsSpawned)
         {
-            if (!z.IsSpawned) continue;
+            var z = bank;
             string rp = z.LastReport.Value.ToString();
             if (rp.Length > 0 && rp != lastReport)
             {
                 lastReport = rp;
                 int stars = 0; foreach (char c in rp) if (c == '*') stars++;
-                Say(stars <= 2 ? "delivered_rough" : "delivered");
+                bool atCliff = rp.Contains("[cliff]");
+                Say(stars <= 2 ? "delivered_rough" : atCliff ? "delivered_cliff" : "delivered");
             }
         }
 

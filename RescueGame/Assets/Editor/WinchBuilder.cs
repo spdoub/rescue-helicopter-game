@@ -224,6 +224,7 @@ public static class WinchBuilder
             ["call_gondola"] = "The cable car's stuck mid-span with someone on top of it. Mind the cables.",
             ["call_ledge"] = "Neighbours report a man on a ledge downtown. He says he's fine. He is not fine.",
             ["delivered"] = "Nice work, Rescue One. Patient's in good hands. Stand by for the next one.",
+            ["delivered_cliff"] = "Cliff station copies, Rescue One. Patient's off and you're topped up. Back to it.",
             ["delivered_rough"] = "Patient delivered. Uh, they've asked to speak to a manager.",
             ["welcome"] = "Morning, crew. Coffee's on the dash. Calls are coming in, get her started.",
         };

@@ -12,6 +12,10 @@ using UnityEngine;
 public class RescueZone : NetworkBehaviour
 {
     public static readonly List<RescueZone> All = new();
+    /// <summary>The one zone that holds the company's money and tally (the first in the list); every delivery credits it.</summary>
+    public static RescueZone Bank => All.Count > 0 ? All[0] : null;
+    [Tooltip("Shown on the HUD marker and said on the radio.")]
+    public string displayName = "HOSPITAL";
 
     [Tooltip("Where delivered survivors walk to (the hospital door).")]
     public Transform exitPoint;
@@ -46,11 +50,12 @@ public class RescueZone : NetworkBehaviour
         int stars = Mathf.Clamp(5 - s.RoughMoments - (minutes > 4f ? 1 : 0) - (s.Singed.Value ? 1 : 0), 1, 5);
         string review = s.Review(stars);
         pay += s.payBonus;
-        Rescued.Value++;
-        Money.Value += pay;
-        string text = $"{s.displayName}{(s.Singed.Value ? " (singed)" : "")}: \"{review}\"  {new string('*', stars)}  +${pay:N0}";
-        LastReport.Value = new FixedString128Bytes(text.Length > 120 ? text[..120] : text);
-        ReportTime.Value = Time.time;
+        var bank = Bank ?? this;
+        bank.Rescued.Value++;
+        bank.Money.Value += pay;
+        string text = $"{s.displayName}{(s.Singed.Value ? " (singed)" : "")}: \"{review}\"  {new string('*', stars)}  +${pay:N0}{(this != bank ? " [cliff]" : "")}";
+        bank.LastReport.Value = new FixedString128Bytes(text.Length > 120 ? text[..120] : text);
+        bank.ReportTime.Value = Time.time;
         s.Say(review, 5f);
     }
 }

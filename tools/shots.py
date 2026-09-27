@@ -65,6 +65,7 @@ SHOTS = {
     "wild_gondola": ["-startwild", "6", "-shotnear", "Grandma,12,4,5", "-shotdelay", "7"],
     "island_pier_boat": ["-shotat", "40,8,-405,120,10,55", "-shotdelay", "8"],
     "island_sheep": ["-shotat", "-10,32,250,45,22,55", "-shotdelay", "8"],
+    "cliff_station": ["-shotat", "-405,24,-83,225,18,55", "-shotdelay", "8"],
     "island_lighthouse": ["-shotat", "-470,45,-230,225,12,50", "-shotdelay", "8"],
     "wild_beach": ["-startwild", "1", "-shotnear", "Grandma,9,2,3", "-shotdelay", "7"],
     "wild_mountain": ["-startwild", "2", "-shotnear", "Grandma,12,3,4", "-shotdelay", "7"],

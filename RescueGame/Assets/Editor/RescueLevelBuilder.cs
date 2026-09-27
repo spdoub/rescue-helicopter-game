@@ -118,6 +118,16 @@ public static class RescueLevelBuilder
         zoneGo.transform.SetParent(null, true);
         zoneGo.name = "HospitalPad";
 
+        // ---- second drop-off: the cliff rescue station (the island generator positions it at load)
+        var oldCliff = GameObject.Find("CliffStationPad"); if (oldCliff) Object.DestroyImmediate(oldCliff);
+        var cliffGo = new GameObject("CliffStationPad");
+        cliffGo.transform.position = new Vector3(-470f, 60f, -120f);
+        var cbox = cliffGo.AddComponent<BoxCollider>(); cbox.isTrigger = true; cbox.center = new Vector3(0f, 3f, 0f); cbox.size = new Vector3(20f, 6f, 20f);
+        var cz = cliffGo.AddComponent<RescueZone>(); cz.displayName = "CLIFF STATION"; cz.basePay = 900;
+        var cexit = new GameObject("ExitPoint").transform; cexit.SetParent(cliffGo.transform, false); cexit.localPosition = new Vector3(-8f, 0f, 16f);
+        cz.exitPoint = cexit;
+        cliffGo.AddComponent<Unity.Netcode.NetworkObject>();
+
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(root.gameObject.scene);
         Debug.Log($"[Level] grandma at {spot}, hospital at {root.position}");
     }

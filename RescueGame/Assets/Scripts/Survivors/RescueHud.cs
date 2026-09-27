@@ -133,7 +133,7 @@ public class RescueHud : MonoBehaviour
                     break;
                 case SurvivorBrain.State.Hooked: goal = $"Winch {them} up!  (hold R at the winch box)"; break;
                 case SurvivorBrain.State.Boarding: goal = $"Get {them} in!"; break;
-                case SurvivorBrain.State.Seated: goal = $"Fly {s.displayName} to the hospital and land on the pad"; anyoneAboard = true; break;
+                case SurvivorBrain.State.Seated: goal = $"Fly {s.displayName} to a landing pad (hospital, or the cliff station)"; anyoneAboard = true; break;
                 default:
                     float next = s.NextCallIn;
                     goal = next >= 0f ? $"{s.displayName} delivered!  Next call in {Mathf.CeilToInt(next)}..." : $"{s.displayName} delivered!";
@@ -142,7 +142,12 @@ public class RescueHud : MonoBehaviour
             Outlined(new Rect(26, y, 900, 30), "- " + goal, objective);
             y += 28f;
         }
-        if (anyoneAboard && RescueZone.All.Count > 0) Marker(cam, RescueZone.All[0].transform.position + Vector3.up * 4f, "HOSPITAL");
+        if (anyoneAboard && RescueZone.All.Count > 0 && cam != null)
+        {
+            RescueZone near = null; float best = float.MaxValue;
+            foreach (var z in RescueZone.All) { float d = Vector3.Distance(cam.transform.position, z.transform.position); if (d < best) { best = d; near = z; } }
+            foreach (var z in RescueZone.All) Marker(cam, z.transform.position + Vector3.up * 4f, z == near ? z.displayName : z.displayName.ToLowerInvariant());
+        }
         return y + 4f;
     }
 
@@ -225,11 +230,11 @@ public class RescueHud : MonoBehaviour
 
         // Money, rescues, and the latest review.
         int cash = 0, saved = 0; string report = "";
-        foreach (var z in RescueZone.All)
+        var bank = RescueZone.Bank;
+        if (bank != null && bank.IsSpawned)
         {
-            if (!z.IsSpawned) continue;
-            cash += z.Money.Value; saved += z.Rescued.Value;
-            string rp = z.LastReport.Value.ToString();
+            cash = bank.Money.Value; saved = bank.Rescued.Value;
+            string rp = bank.LastReport.Value.ToString();
             if (rp.Length > 0) report = rp;
         }
         if (RescueZone.All.Count > 0)
@@ -238,7 +243,7 @@ public class RescueHud : MonoBehaviour
         if (report.Length > 0 && Time.time - reportShownAt < ReportSeconds)
         {
             float w = Mathf.Min(760f, Screen.width - 40f);
-            GUI.Box(new Rect((Screen.width - w) / 2f, 70f, w, 56f), "DELIVERED!  " + report, banner);
+            GUI.Box(new Rect((Screen.width - w) / 2f, 70f, w, 56f), "DELIVERED!  " + report.Replace(" [cliff]", ""), banner);
         }
         UpgradePrompt(cam, cash);
         ActionPrompt();

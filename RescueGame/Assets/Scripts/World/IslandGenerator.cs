@@ -46,6 +46,7 @@ public class IslandGenerator : MonoBehaviour
         BuildLandmarks();
         BuildRoads();
         BuildGondola();
+        BuildCliffStation();
         if (!Application.isPlaying)
             foreach (Transform t in GetComponentsInChildren<Transform>(true)) if (t != transform) t.gameObject.hideFlags = HideFlags.DontSave;
     }
@@ -436,6 +437,40 @@ public class IslandGenerator : MonoBehaviour
     /// <summary>Where the stuck gondola cabin is (world), for a future rescue.</summary>
     public Vector3 GondolaCabin { get; private set; }
     static int Metal_() => Stone; // (grey stone doubles as painted steel at this scale)
+
+    // ------------------------------------------------------------------ the cliff rescue station (a second drop-off + refuel pad)
+
+    public Vector3 CliffStationPad { get; private set; }
+
+    void BuildCliffStation()
+    {
+        var kit = new Kit(MatCount);
+        Vector3 at = LandNear(-470f, -120f);
+        // flatten a pad: a concrete slab with an H, a low hut, a windsock, a fuel drum
+        at.y += 0.3f;
+        kit.Box(Stone, at, new Vector3(22f, 0.6f, 22f));
+        kit.Box(Paint, at + Vector3.up * 0.31f, new Vector3(1.2f, 0.02f, 8f));
+        kit.Box(Paint, at + Vector3.up * 0.31f + Vector3.right * 2.5f, new Vector3(1.2f, 0.02f, 8f));
+        kit.Box(Paint, at + Vector3.up * 0.31f + Vector3.right * 1.25f, new Vector3(3.7f, 0.02f, 1.2f));
+        for (int i = 0; i < 12; i++) { float a = i * Mathf.PI / 6f; kit.Box(Paint, at + new Vector3(Mathf.Cos(a) * 10f, 0.36f, Mathf.Sin(a) * 10f), new Vector3(0.5f, 0.1f, 0.5f)); }
+        Vector3 hut = at + new Vector3(-8f, 0.3f, 13f);
+        Cabin(kit, hut, 7f, 5f, 3f, 0f);
+        kit.Box(RoofM, hut + Vector3.up * 5.6f, new Vector3(2.4f, 0.4f, 0.1f));               // a red sign board
+        kit.Cylinder(Stone, at + new Vector3(12f, 0.3f, 12f), 0.06f, 6f, 5);                      // windsock pole
+        kit.Cone(Paint, at + new Vector3(12f, 6.1f, 12f), 0.3f, 1.6f, 8);
+        kit.Cylinder(RoofM, at + new Vector3(10f, 0.3f, -11f), 0.5f, 1.2f, 8);                   // fuel drum
+        kit.Cylinder(RoofM, at + new Vector3(11.2f, 0.3f, -11f), 0.5f, 1.2f, 8);
+        var go = new GameObject("CliffStation"); go.transform.SetParent(transform, false);
+        var mesh = kit.ToMesh("CliffStation");
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+        CliffStationPad = at + Vector3.up * 0.3f;
+        Debug.Log($"[Island] cliff station pad at {CliffStationPad:F1}");
+        // the drop-off zone itself lives in the scene as an in-scene NetworkObject (CliffStationPad); we just move it here
+        var zone = GameObject.Find("CliffStationPad");
+        if (zone) { zone.transform.position = CliffStationPad; var ex = zone.transform.Find("ExitPoint"); if (ex) ex.position = hut + Vector3.forward * 3.5f; }
+    }
 
     // ------------------------------------------------------------------ mesh kit
 

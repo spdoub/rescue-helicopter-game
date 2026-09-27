@@ -36,6 +36,7 @@ Material:
     - _HideTagged: 0
     - _LightWrap: 0.5
     - _ShadowStrength: 0.3
+    - _SuitHueShift: 0
     - _WorldUVScale: 0
     m_Colors:
     - _BaseColor: {r: 0.86, g: 0.8, b: 0.68, a: 1}

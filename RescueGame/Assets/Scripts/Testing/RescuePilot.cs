@@ -32,6 +32,13 @@ public class RescuePilot
         if (heli == null) heli = Object.FindAnyObjectByType<NetworkHelicopter>();
         if (survivor == null) survivor = SurvivorBrain.Find(target);
         if (zone == null) zone = Object.FindAnyObjectByType<RescueZone>();
+        if (phase == Phase.ToPickup || phase == Phase.Hold)
+        {
+            // land at whichever drop-off is nearest when they're aboard (the cliff station, if that's closer than the hospital)
+            RescueZone best = null; float bd = float.MaxValue;
+            foreach (var z in RescueZone.All) { float d = Vector3.Distance(heli ? heli.transform.position : Vector3.zero, z.transform.position); if (d < bd) { bd = d; best = z; } }
+            if (best != null) zone = best;
+        }
         if (heli == null) return default;
 
         var h = heli.transform;
