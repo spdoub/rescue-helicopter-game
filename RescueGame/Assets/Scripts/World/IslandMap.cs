@@ -25,8 +25,8 @@ public class IslandMap : MonoBehaviour
         if (isl == null) return;
         tex = Paint(isl);
         // dash, co-pilot side (leaning back with the panel), and the left cabin bulkhead
-        Place("MapDash", new Vector3(-0.62f, 1.56f, 2.62f), Quaternion.Euler(-18f, 180f, 0f), 0.26f);
-        Place("MapWall", new Vector3(-0.65f, 1.95f, 1.44f), Quaternion.Euler(0f, 0f, 0f), 0.42f);
+        Place("MapDash", new Vector3(-0.62f, 1.50f, 2.60f), Quaternion.Euler(18f, 0f, 0f), 0.26f);   // on the panel, leaning back, facing the seats
+        Place("MapWall", new Vector3(-0.65f, 1.95f, 1.42f), Quaternion.Euler(0f, 0f, 0f), 0.42f);     // on the bulkhead's cabin face
     }
 
     void Place(string name, Vector3 local, Quaternion rot, float width)
@@ -44,11 +44,12 @@ public class IslandMap : MonoBehaviour
         foreach (var (cx, cy) in new[] { (-0.46f, 0.46f), (0.46f, 0.46f), (-0.46f, -0.46f), (0.46f, -0.46f) })
         {
             var t = GameObject.CreatePrimitive(PrimitiveType.Quad); t.name = "Tape"; DestroyImmediate(t.GetComponent<Collider>());
-            t.transform.SetParent(go.transform, false); t.transform.localPosition = new Vector3(cx, cy, -0.002f);
+            t.transform.SetParent(go.transform, false); t.transform.localPosition = new Vector3(cx, cy, -0.002f);   // (in front of the paper, on the visible side)
             t.transform.localRotation = Quaternion.Euler(0f, 0f, cx * cy > 0f ? 45f : -45f); t.transform.localScale = new Vector3(0.22f, 0.08f, 1f);
             var tr = t.GetComponent<Renderer>(); tr.sharedMaterial = pinMaterial; var mpb = new MaterialPropertyBlock(); mpb.SetColor("_BaseColor", new Color(0.7f, 0.7f, 0.66f, 1f)); tr.SetPropertyBlock(mpb);
         }
         maps.Add((go.transform, width));
+        Debug.Log($"[Map] {name} at heli-local {local} (tex {(tex ? tex.width : 0)}px)");
     }
 
     /// <summary>Paint the island: sea, sand, grass, rock, snow from the terrain heights; the city as a grey grid; hospital cross; helipad H.</summary>
