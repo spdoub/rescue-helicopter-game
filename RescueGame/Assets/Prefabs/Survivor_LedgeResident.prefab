@@ -135,7 +135,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 4087719421
+  GlobalObjectIdHash: 3395435448
   InScenePlacedSourceGlobalObjectIdHash: 3197619395
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -315,7 +315,7 @@ MonoBehaviour:
   chair: {fileID: 0}
   dog: {fileID: 0}
   payBonus: 350
-  hookNoticeRange: 4
+  hookNoticeRange: 5.5
   yankForce: 2600
   yankSeconds: 0.7
   yankEvery: 3.5
@@ -479,6 +479,11 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: {x: 0, y: 0, z: 0, w: 0}
   Agreed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  Place:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0

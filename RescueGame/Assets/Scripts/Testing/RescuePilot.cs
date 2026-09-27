@@ -93,7 +93,7 @@ public class RescuePilot
                     Vector3 n = Quaternion.Euler(0f, ls.w, 0f) * Vector3.forward, wallPt = new Vector3(ls.x, 0f, ls.z) - n * 0.45f;
                     Vector3 tipXZ = Flat(holdXZ + rot * new Vector3(1.4f, 0f, 0.85f));
                     float outFromWall = Vector3.Dot(tipXZ - Flat(wallPt), n);
-                    if (outFromWall < 1.2f) holdXZ += n * (1.2f - outFromWall);
+                    if (outFromWall < 1.4f) holdXZ += n * (1.4f - outFromWall);   // (past any cornice or parapet above the ledge)
                 }
                 if (phase == Phase.Hold) { target.x = holdXZ.x; target.z = holdXZ.z; }
                 if (phase == Phase.ToPickup && Flat(target - h.position).magnitude < (ledge ? 2.5f : 1.2f) && vel.magnitude < (ledge ? 1.5f : 1f)

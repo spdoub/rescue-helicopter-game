@@ -21,6 +21,7 @@ public static class SurvivorBuilder
         public SurvivorBrain.Kind kind;
         public float height, eye, walk, sprint, jump, grip, hardLanding, mass;
         public int payBonus;
+        public float hookNoticeRange = 4f;
     }
 
     static readonly Spec Grandma = new()
@@ -106,7 +107,7 @@ public static class SurvivorBuilder
         id = "LedgeResident", displayName = "Ledge Resident", kind = SurvivorBrain.Kind.LedgeResident,
         model = "Assets/Art/Characters/LedgeResident/LedgeResident.fbx", texture = "Assets/Art/Characters/LedgeResident/LedgeResident_BaseColor.png",
         voiceDir = "Assets/Audio/Survivors/ledge", outPath = "Assets/Prefabs/Survivor_LedgeResident.prefab",
-        height = 1.65f, eye = 1.46f, walk = 1.6f, sprint = 2.2f, jump = 3f, grip = 20000f, hardLanding = 11f, mass = 78f, payBonus = 350,
+        height = 1.65f, eye = 1.46f, walk = 1.6f, sprint = 2.2f, jump = 3f, grip = 20000f, hookNoticeRange = 5.5f, hardLanding = 11f, mass = 78f, payBonus = 350,
     };
 
     [MenuItem("Tools/Rescue Heli/Build Survivor Ledge Resident")]
@@ -208,7 +209,7 @@ public static class SurvivorBuilder
         inst.GetComponent<Rigidbody>().mass = spec.mass;
 
         var brain = inst.GetComponent<SurvivorBrain>() ?? inst.AddComponent<SurvivorBrain>();
-        brain.kind = spec.kind; brain.displayName = spec.displayName; brain.payBonus = spec.payBonus;
+        brain.kind = spec.kind; brain.displayName = spec.displayName; brain.payBonus = spec.payBonus; brain.hookNoticeRange = spec.hookNoticeRange;
 
         // voice: every recorded line in the survivor's folder (tools/survivor_lines.py)
         var voice = inst.GetComponent<SurvivorVoice>() ?? inst.AddComponent<SurvivorVoice>();
