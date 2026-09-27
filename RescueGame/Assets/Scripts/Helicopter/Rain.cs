@@ -13,6 +13,8 @@ public class Rain : MonoBehaviour
     public Material streakMaterial;   // the wind-streak material
     public float dropsPerSecond = 6f;
     public int maxDrops = 60;
+    public AudioClip rainLoop, wiperSqueak;
+    AudioSource rainSource; float lastSweepSign;
 
     class Drop { public Transform t; public float born, life; public Vector2 pos; }
     readonly List<Drop> drops = new();
@@ -38,6 +40,8 @@ public class Rain : MonoBehaviour
         foreach (var r in pivot.GetComponentsInChildren<Renderer>()) { r.sharedMaterial = dropMaterial ? dropMaterial : r.sharedMaterial; var mpb = new MaterialPropertyBlock(); mpb.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.09f, 1f)); r.SetPropertyBlock(mpb); r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; }
         wiper = pivot; wiperRest = pivot.localRotation;
         pivot.gameObject.SetActive(false);
+        rainSource = gameObject.AddComponent<AudioSource>();
+        rainSource.clip = rainLoop; rainSource.loop = true; rainSource.spatialBlend = 0f; rainSource.volume = 0f; rainSource.playOnAwake = false;
     }
 
     ParticleSystem MakeSheet()
@@ -77,6 +81,15 @@ public class Rain : MonoBehaviour
             var vel = sheet.velocityOverLifetime; vel.enabled = true; vel.x = wind.x * 0.6f; vel.z = wind.z * 0.6f; vel.y = -14f;
             var em = sheet.emission; em.rateOverTime = raining ? 900f : 0f;
         }
+        // rain sound: fades in with the weather, louder with the doors shut (you're in a tin box)
+        if (rainSource && rainLoop)
+        {
+            bool doorsShut = true; foreach (var sd in GetComponentsInChildren<SlidingDoor>()) if (sd.IsOpen) doorsShut = false;
+            float target = raining ? (doorsShut ? 0.55f : 0.35f) : 0f;
+            rainSource.volume = Mathf.MoveTowards(rainSource.volume, target, Time.deltaTime * 0.4f);
+            if (rainSource.volume > 0.01f && !rainSource.isPlaying) rainSource.Play();
+            if (rainSource.volume <= 0.01f && rainSource.isPlaying) rainSource.Stop();
+        }
         if (!raining) { foreach (var d in drops) Destroy(d.t.gameObject); drops.Clear(); return; }
 
         // drops gather on the inside of the windscreen (only the local pilot sees them close up, but they exist for everyone)
@@ -108,6 +121,8 @@ public class Rain : MonoBehaviour
         // the wiper sweeps, and clears whatever it passes over on the pilot's side
         wiperPhase += Time.deltaTime * 1.6f;
         float sweep = Mathf.Sin(wiperPhase) * 55f;
+        float sign = Mathf.Sign(Mathf.Cos(wiperPhase));
+        if (sign != lastSweepSign && wiperSqueak) { lastSweepSign = sign; AudioSource.PlayClipAtPoint(wiperSqueak, transform.TransformPoint(new Vector3(0.35f, 1.9f, 2.9f)), 0.35f); }
         wiper.localRotation = wiperRest * Quaternion.Euler(0f, 0f, sweep);
         float bladeX = 0.35f + Mathf.Sin(sweep * Mathf.Deg2Rad) * -0.5f; // roughly where the blade tip is across the screen
         for (int i = drops.Count - 1; i >= 0; i--)

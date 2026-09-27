@@ -6088,6 +6088,8 @@ MonoBehaviour:
   streakMaterial: {fileID: 2100000, guid: 3bb23a9c1fd214cfe81809260bc0a6d8, type: 2}
   dropsPerSecond: 6
   maxDrops: 60
+  rainLoop: {fileID: 8300000, guid: 0e98e910b2ff2482b86c4cfa8c0f58b5, type: 3}
+  wiperSqueak: {fileID: 8300000, guid: 9d285237fd455488cba543a924e2a879, type: 3}
 --- !u!114 &1229749802
 MonoBehaviour:
   m_ObjectHideFlags: 0

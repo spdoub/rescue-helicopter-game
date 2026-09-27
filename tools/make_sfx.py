@@ -25,6 +25,8 @@ SFX = {
     "car_horn": ("Single short car horn honk from a small car, city street, close", 0.8, False),
     "bird_splat": ("A bird hitting a helicopter windscreen: wet thump, a squawk cut short, feathers, close and sudden", 0.9, False),
     "munch": ("Cartoon character taking a big crunchy bite of pizza and chewing with their mouth open, short, close", 1.3, False),
+    "rain_loop": ("Heavy rain drumming on a helicopter windscreen and metal roof, steady, no thunder, seamless loop", 6.0, True),
+    "wiper_squeak": ("Old rubber windscreen wiper dragging across wet glass, one squeaky stroke", 0.9, False),
     "gulp": ("Cartoon big gulp of a fizzy energy drink from a can, glug glug, then a satisfied ahh and a tiny burp", 1.6, False),
     "delivered_jingle": ("Short cheerful cartoon success jingle, bouncy brass and xylophone, cash register ding at the end", 2.5, False),
 }

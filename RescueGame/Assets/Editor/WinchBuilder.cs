@@ -223,7 +223,7 @@ public static class WinchBuilder
 
         // rain (gusty weather): windscreen drops + wiper + a rain sheet
         var rain = heli.GetComponent<Rain>(); if (!rain) rain = heli.AddComponent<Rain>();
-        rain.dropMaterial = smoke; rain.streakMaterial = smoke;
+        rain.dropMaterial = smoke; rain.streakMaterial = smoke; rain.rainLoop = C("rain_loop"); rain.wiperSqueak = C("wiper_squeak");
         EditorUtility.SetDirty(rain);
 
         // bird strikes on the windscreen
